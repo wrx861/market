@@ -93,6 +93,18 @@ input_credentials() {
     echo -e "${GREEN}═══════════════════════════════════════════════════════${NC}"
     echo ""
     
+    # Перенаправляем stdin на /dev/tty для интерактивного ввода
+    exec < /dev/tty
+    
+    echo -e "${YELLOW}Telegram Bot${NC}"
+    read -p "Введите TELEGRAM_BOT_TOKEN: " TELEGRAM_BOT_TOKEN
+    read -p "Введите TELEGRAM_ADMIN_ID: " TELEGRAM_ADMIN_ID
+    echo ""
+    
+    echo -e "${YELLOW}Google AI Studio (Gemini)${NC}"
+    read -p "Введите GOOGLE_API_KEY: " GOOGLE_API_KEY
+    echo ""
+    
     echo -e "${YELLOW}Rossko API (поставщик запчастей)${NC}"
     read -p "Введите ROSSKO_KEY1: " ROSSKO_KEY1
     read -p "Введите ROSSKO_KEY2: " ROSSKO_KEY2
@@ -112,11 +124,6 @@ input_credentials() {
     echo -e "${YELLOW}OpenAI API (AI диагностика)${NC}"
     read -sp "Введите OpenAI API ключ: " OPENAI_API_KEY
     echo ""
-    echo ""
-    
-    echo -e "${YELLOW}N8N Webhook для уведомлений (опционально, Enter для пропуска)${NC}"
-    read -p "Введите N8N Webhook URL: " N8N_WEBHOOK_URL
-    N8N_WEBHOOK_URL=${N8N_WEBHOOK_URL:-""}
     echo ""
     
     echo -e "${GREEN}✓ Все данные получены${NC}"
