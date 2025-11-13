@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: market-mongodb
+    restart: unless-stopped
+    volumes:
+      - ./mongodb/data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=market_db
+    networks:
+      - market-network
+    ports:
+      - "27017:27017"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: market-backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - mongodb
+    networks:
+      - market-network
+    ports:
+      - "8001:8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: market-frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+    networks:
+      - market-network
+    ports:
+      - "3001:3000"
+
+  nginx:
+    image: nginx:alpine
+    container_name: market-nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - market-network
+    ports:
+      - "80:80"
+      - "443:443"
+
+networks:
+  market-network:
+    driver: bridge
