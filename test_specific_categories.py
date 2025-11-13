@@ -71,7 +71,7 @@ def test_specific_category():
 def test_backend_with_specific_vin():
     """Test backend with the specific VIN from the request"""
     
-    backend_url = "https://car-garage-app.preview.emergentagent.com"
+    backend_url = "https://vehicle-parts-tool.preview.emergentagent.com"
     test_vin = "XW7BF4FK60S145161"
     
     print(f"\n" + "="*60)

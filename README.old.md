@@ -81,7 +81,7 @@ tail -f /var/log/supervisor/telegram_bot.out.log
 
 ## 📱 Telegram Mini App URL
 
-https://car-garage-app.preview.emergentagent.com
+https://vehicle-parts-tool.preview.emergentagent.com
 
 ---
 

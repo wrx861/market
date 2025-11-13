@@ -1,91 +1,75 @@
 <analysis>
-The trajectory documents the iterative development and enhancement of the Market Auto Parts Telegram Mini App. The initial phase focused on fixing a non-functional OBD-II diagnostics feature. This began with an attempt to repair a Google Gemini integration, which suffered from SDK and quota issues. The engineer successfully refactored the client to use Gemini's REST API. However, at the user's request, the entire AI functionality was migrated to the more stable OpenAI API (GPT-4o). This involved creating a new client, managing API keys, and extensive prompt engineering to refine the output for mobile readability and specific content requirements (e.g., local repair prices for Tyumen).
+The trajectory details the debugging and feature expansion of the Market Auto Parts application. The initial focus was the integration of a new parts supplier, Autotrade. This was a highly iterative process involving multiple rounds of user-reported bug fixes. The engineer successfully integrated the API, but had to repeatedly debug issues with authentication, response parsing (price, quantity, stock locations), frontend data display, and complex server-side filtering logic to correctly handle in-stock items for the user's specific city, Tyumen.
 
-Following the AI feature stabilization, the focus shifted to a major expansion of the Garage module. The user requested comprehensive CRUD (Create, Read, Update, Delete) functionality for vehicles, service logs, reminders, and a new expense analytics feature. This required adding numerous backend endpoints and extensive frontend modifications. A significant portion of the work involved a complete UI redesign to create a unified, dark, automotive-themed aesthetic across all pages, along with fixing UX issues like adding Back buttons and ensuring logical user flows.
+Following the stabilization of the Autotrade integration, the user requested a significant new feature: scraping OEM part numbers from a supplier's web catalog using a VIN. The engineer began implementing this using a backend Playwright script. This approach quickly hit a major roadblock due to authorization failures and, ultimately, a regional IP block on the target website.
 
-The final phase involved integrating new parts suppliers. An attempt to add the Autostels SOAP API was unsuccessful due to persistent  errors, which were determined to be an issue on the supplier's end. A detailed support ticket was drafted for the user. The trajectory concludes with the user providing credentials for a new supplier, Autotrade, and the engineer beginning to study its API documentation.
+This technical impasse caused a major pivot. The user, noting their own server in Germany wouldn't have this IP block, requested a full, automated deployment package for their personal Ubuntu server. The engineer then created a set of Dockerfiles, Nginx configurations, and interactive installation scripts. However, this led to a final problem: GitHub's secret-scanning security feature blocked the code push because an API key was accidentally included in a past commit. The trajectory ends with the engineer attempting to resolve this by creating a new, clean Git branch to get rid of the problematic commit history.
 </analysis>
 
 <product_requirements>
-The project is a Telegram Mini App, Market Auto Parts, for car enthusiasts to search for parts and manage vehicle maintenance.
+The project is the Market Auto Parts Telegram Mini App, designed for automotive enthusiasts. Its purpose is to provide a single interface for searching for auto parts and managing vehicle maintenance.
 
-**Core Features:**
-*   **Part Search:** Users can search for auto parts by article number. The system integrates with multiple suppliers (Rossko, and planned Autostels/Autotrade), aggregates results, and presents the best offer based on price and delivery time.
-*   **AI Diagnostics:** An AI-powered tool (using OpenAI's GPT-4o) allows users to get detailed, mobile-friendly explanations of OBD-II error codes, including potential causes, symptoms, and estimated repair costs for a specific city (Tyumen).
-*   **Vehicle Garage:** A central feature for users to manage their vehicles.
-    *   **Vehicle Management:** Add and delete vehicles.
-    *   **Record Keeping:** Create, edit, and delete service records, logbook entries, and maintenance reminders.
-    *   **Expense Analytics:** A dedicated page to view a summary and breakdown of all vehicle-related expenses logged in the app.
-*   **Admin Panel:** A section for administrators to view user activity logs and manage a site-wide price markup percentage on parts.
-
-The development has been highly iterative, responding to direct user feedback to refine UI/UX, enhance search logic, and debug features.
+**Core Features Implemented & In-Progress:**
+1.  **Multi-Supplier Part Search:** Users search for parts by article number. The backend queries multiple suppliers (currently Rossko and Autotrade), aggregates the results, removes duplicates, and presents the best options based on price, availability, and delivery time for the user's locale (Tyumen).
+2.  **AI-Powered Diagnostics:** An existing feature using OpenAI's GPT-4o to provide detailed explanations of OBD-II error codes.
+3.  **Vehicle Garage:** A module for users to manage their vehicles, including service logs, reminders, and expense tracking.
+4.  **VIN-to-OEM Part Scraping (Blocked):** A new feature to automate finding OEM part numbers. The user enters a VIN and a part name (e.g., ball joint). The backend uses Playwright to log into a supplier's website, navigate their OEM catalog, and scrape the corresponding OEM article numbers for the user.
+5.  **Automated Deployment:** A new requirement to create a self-contained, interactive installation script to deploy the entire application stack (Frontend, Backend, Nginx, Docker) onto a user-provided Ubuntu server.
 </product_requirements>
 
 <key_technical_concepts>
 - **Frameworks:** FastAPI (Python Backend), React (Frontend).
 - **Database:** MongoDB.
-- **Architecture:** Full-stack with a REST API. Services are managed by .
-- **API Integrations:**
-    - Rossko (SOAP/XML) for parts search.
-    - OpenAI (REST/JSON) for AI diagnostics.
-    - Autostels (SOAP/XML, attempted integration).
-    - Autotrade (REST/JSON, pending integration).
-- **Key Libraries:**  and  (for API clients),  (data modeling),  (Telegram integration).
-- **Core Logic:** Multi-supplier data aggregation, de-duplication, and result prioritization.
+- **Architecture:** Monorepo with a full-stack REST API. Services are managed via  and .
+- **API Integrations:** Rossko (SOAP/XML), OpenAI (REST/JSON), Autotrade (REST/JSON).
+- **Web Scraping:** Playwright for browser automation to navigate and extract data from a web catalog that lacks a public API for the desired functionality.
+- **Deployment:** Docker, Docker Compose, Nginx (as a reverse proxy with SSL), and Bash scripting for automated, interactive server setup.
 </key_technical_concepts>
 
 <code_architecture>
-The application follows a standard monorepo structure with distinct backend and frontend directories.
+The application uses a monorepo structure with separate  and  directories. Deployment is containerized using Docker.
 
 
 
 -   ****
-    -   **Importance:** The core of the FastAPI application. It defines all API routes, including search, garage management (CRUD for vehicles, records, reminders), expense analytics, and AI diagnostics. It orchestrates calls to various clients (, , etc.).
-    -   **Changes:** Heavily modified to add a full suite of CRUD endpoints for the Garage feature. The  endpoint was refactored to aggregate and process results from multiple suppliers using a new  helper function. The AI endpoints were switched from Gemini to OpenAI.
+    -   **Importance:** This new file encapsulates all logic for interacting with the Autotrade supplier API. It handles authentication, search requests, and parsing the complex JSON response.
+    -   **Changes:** Created from scratch. It was heavily modified to correctly parse part details (price, quantity, delivery days) from a nested structure, calculate an  status, and explicitly filter out any parts with a quantity of zero to prevent showing unavailable items.
 
 -   ****
-    -   **Importance:** A new file created to handle all interactions with the OpenAI API. It encapsulates the logic for making API calls and includes the carefully crafted system prompt for OBD-II code diagnosis.
-    -   **Changes:** The system prompt was iteratively updated based on user feedback to refine the output format, remove specific sections, add localized cost estimates, and strip out Markdown for better mobile readability.
+    -   **Importance:** The main FastAPI application file defining all API routes. It orchestrates calls to different supplier clients and applies business logic.
+    -   **Changes:** The  endpoint was updated to query both Rossko and the new Autotrade client in parallel. A key change was made to the  function, modifying it to skip deduplication when a local stock filter () is active, ensuring all local warehouse options are shown. A new endpoint, , was added to trigger the Playwright scraping process.
 
 -   ****
-    -   **Importance:** A new client created to integrate with the Autostels SOAP API.
-    -   **Changes:** Created and debugged extensively. The code was modified from using XML elements to attributes to match the API documentation. Despite corrections, the integration failed due to an  SOAP fault, indicating an issue on the supplier's side.
+    -   **Importance:** This new file contains the Playwright logic for the VIN-to-OEM scraping feature. It's responsible for automating browser login and navigation.
+    -   **Changes:** Created to handle automated browser interaction. The code attempts to log into  and then navigate to a specific catalog URL. This implementation is currently non-functional due to being blocked by the target site's regional restrictions in the development environment.
 
 -   ****
-    -   **Importance:** The root React component. Manages client-side routing, top-level state (like , ), and navigation functions.
-    -   **Changes:** The routing logic ( function) was expanded significantly to include all the new pages for the Garage feature (, , etc.). State management for  was added to pass data to forms for editing existing records. The bottom navigation bar was added and later removed based on user feedback.
+    -   **Importance:** The UI for displaying part search results.
+    -   **Changes:** Was modified to fix a bug where it displayed  instead of the correct . The filter selection dropdown was also updated to send the correct value () to the backend to ensure the local stock filter works as intended.
 
 -   ****
-    -   **Importance:** The main page for the Garage feature, displaying the user's list of vehicles.
-    -   **Changes:** Underwent significant redesign. Functionality was added to display a list of vehicles. A vehicle selector dropdown was added to enable context-sensitive actions (like diagnostics) only when a car is selected. A delete button was added to vehicle cards and later removed at the user's request.
+    -   **Importance:** The UI for the new VIN-based OEM search feature.
+    -   **Changes:** This file was completely refactored from an old, disabled state. It now contains a form to accept a VIN and a part name, calls the new  endpoint, and displays the scraped OEM numbers with a Price check button.
 
--   ****
-    -   **Importance:** Shows detailed information for a single vehicle and serves as a hub for accessing its logs, reminders, and other actions.
-    -   **Changes:** The  function was a major focus. It was debugged and refactored to use the Telegram SDK's native  dialog for a better user experience and to ensure functionality within the Telegram WebView.
-
--   ****
-    -   **Importance:** A new page to display analytics on vehicle-related spending.
-    -   **Changes:** Created from scratch. It fetches aggregated expense data from the backend and displays it with a filter, a summary pie chart, and a list of recent transactions. The styling was later updated to match the new dark, automotive-themed design.
-
--   **, , **
-    -   **Importance:** These pages display lists of records for a vehicle.
-    -   **Changes:** All were updated to include Edit (✏️) and Delete (🗑️) buttons next to each list item, with corresponding handler functions to call the new backend endpoints and trigger navigation to the appropriate editing form.
+-   ** directory**
+    -   **Importance:** This new directory contains all artifacts for deploying the application on a separate server.
+    -   **Changes:** Created to fulfill the user's request for an automated installation. It includes interactive  scripts that prompt for secrets, Dockerfiles for the frontend and backend, a  file to orchestrate the services, and an  file for reverse proxy and SSL configuration.
 </code_architecture>
 
 <pending_tasks>
-- **Autostels API Integration:** This is on hold. The integration is blocked by a SOAP contract error on the supplier's end. The task can be resumed once their support provides a fix or updated documentation.
-- **Early-Stage Feature Ideas:** The user mentioned several features early on that have not been implemented: analytics with graphs for expenses/mileage, car-brand clubs/chats, a user forum, and gamification (achievements/points).
+- **Fix VIN-to-OEM Scraping Feature:** The Playwright-based implementation in  is blocked by the supplier website's regional IP filtering. This feature needs to be revisited and fixed, likely after the successful deployment to the user's server in Germany.
+- **Push Project to GitHub:** The primary blocker is resolving the Git history issue that prevents pushing to the user's repository due to a previously committed secret.
+- **Early-Stage Feature Ideas:** Long-term, unimplemented ideas include expense analytics graphs, car-brand clubs/chats, and a user forum.
 </pending_tasks>
 
 <current_work>
-The immediate focus is on integrating a new parts supplier, **Autotrade,** after the Autostels integration attempt was blocked by persistent API errors.
+The immediate task is resolving a  failure to the user's GitHub repository (). The push is being rejected by GitHub's Push Protection feature, which detected an OpenAI API key in a past commit (). Even though the secret has been removed from the current files and replaced with interactive prompts in the deployment scripts, its presence in the repository's history prevents any new pushes.
 
-**Last Actions:**
-1.  The user, frustrated with the Autostels API issues, requested to switch focus to a new supplier, Autotrade.
-2.  The user provided an API key () and a URL to the API documentation ().
-3.  The previous AI engineer acknowledged the request and began the initial step of the integration process: reading and analyzing the provided API documentation to understand its methods, authentication, and data structures. The trajectory ends as this initial research is underway. The plan is to create a new  and then modify the search logic in  to incorporate this third supplier, following the same aggregation and de-duplication pattern established with Rossko.
+The previous engineer's final action was to try and circumvent this by creating a new, clean branch to effectively start a new history, free of the problematic commit.
+
+**Last Action:** A new branch was created with the command . The next logical step would be to commit the current (and clean) state of the project to this new branch and attempt the push again. The core issue is not with the current code, but with cleaning the Git history to satisfy GitHub's security rules.
 </current_work>
 
 <optional_next_step>
-Continue the integration of the Autotrade API by creating a new  file and implementing the logic to fetch parts based on the documentation.
+Commit all current project files to the new  branch and attempt to push this new branch to the user's GitHub repository to bypass the historical secret issue.
 </optional_next_step>
