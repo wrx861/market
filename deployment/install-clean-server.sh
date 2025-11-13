@@ -93,6 +93,9 @@ input_credentials() {
     echo -e "${GREEN}═══════════════════════════════════════════════════════${NC}"
     echo ""
     
+    # Перенаправляем stdin на /dev/tty для интерактивного ввода
+    exec < /dev/tty
+    
     echo -e "${YELLOW}Telegram Bot${NC}"
     read -p "Введите TELEGRAM_BOT_TOKEN: " TELEGRAM_BOT_TOKEN
     read -p "Введите TELEGRAM_ADMIN_ID: " TELEGRAM_ADMIN_ID
