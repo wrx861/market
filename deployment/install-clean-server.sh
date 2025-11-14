@@ -180,16 +180,34 @@ download_project() {
     # Скачивание backend кода
     echo -e "${YELLOW}Скачивание backend...${NC}"
     cd $APP_DIR/backend
+    
+    # Основные файлы backend
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/server.py -o server.py
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/models.py -o models.py
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/requirements.txt -o requirements.txt
+    
+    # Клиенты API поставщиков
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/rossko_client.py -o rossko_client.py
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/autotrade_client.py -o autotrade_client.py
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/autotrade_oem_parser.py -o autotrade_oem_parser.py
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/autostels_client.py -o autostels_client.py
+    
+    # Клиенты для VIN и AI
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/partsapi_client.py -o partsapi_client.py
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/openai_client.py -o openai_client.py
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/gemini_client.py -o gemini_client.py
+    
+    # Вспомогательные модули (КРИТИЧЕСКИ ВАЖНЫЕ!)
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/cache_manager.py -o cache_manager.py
-    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/requirements.txt -o requirements.txt
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/rate_limiter.py -o rate_limiter.py
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/proxy_manager.py -o proxy_manager.py
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/n8n_client.py -o n8n_client.py
+    
+    # Парсеры (опциональные, но скачаем на всякий случай)
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/partkom_parser.py -o partkom_parser.py 2>/dev/null || true
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/rossko_parser.py -o rossko_parser.py 2>/dev/null || true
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/berg_parser.py -o berg_parser.py 2>/dev/null || true
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/backend/telegram_bot.py -o telegram_bot.py 2>/dev/null || true
     
     # Скачивание frontend кода
     echo -e "${YELLOW}Скачивание frontend...${NC}"
