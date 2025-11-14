@@ -20,15 +20,17 @@ FROM nginx:alpine
 # Копирование собранных файлов
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Копирование конфигурации nginx для SPA
-RUN echo 'server { \n\
-    listen 3000; \n\
-    location / { \n\
-        root /usr/share/nginx/html; \n\
-        index index.html; \n\
-        try_files $uri $uri/ /index.html; \n\
-    } \n\
-}' > /etc/nginx/conf.d/default.conf
+# Создание конфигурации nginx для SPA
+RUN cat > /etc/nginx/conf.d/default.conf << 'NGCONF'
+server {
+    listen 3000;
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+}
+NGCONF
 
 EXPOSE 3000
 
