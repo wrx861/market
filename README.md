@@ -4,22 +4,27 @@
 
 Telegram Mini App для поиска автозапчастей с интеграцией поставщиков, OEM каталогом и AI диагностикой.
 
-## ⚡ Быстрая установка на чистый сервер
+## ⚡ Быстрая установка
 
-### 🔥 Рекомендуемый способ (Git Clone)
+### 🏢 Для сервера где УЖЕ есть проекты (РЕКОМЕНДУЕТСЯ)
+
+```bash
+wget https://raw.githubusercontent.com/wrx861/market/main/deployment/install-existing-server.sh
+chmod +x install-existing-server.sh
+sudo bash install-existing-server.sh
+```
+
+**✨ Особенности:**
+- Автоматически подбирает свободные порты
+- Не конфликтует с существующими проектами
+- Не требует перезагрузки других сервисов
+
+### 🆕 Для чистого нового сервера
 
 ```bash
 wget https://raw.githubusercontent.com/wrx861/market/main/deployment/install-with-git.sh
 chmod +x install-with-git.sh
 sudo bash install-with-git.sh
-```
-
-### 📦 Альтернативный способ (Curl)
-
-```bash
-wget https://raw.githubusercontent.com/wrx861/market/main/deployment/install-clean-server.sh
-chmod +x install-clean-server.sh
-sudo bash install-clean-server.sh
 ```
 
 **✨ Скрипт автоматически:**
