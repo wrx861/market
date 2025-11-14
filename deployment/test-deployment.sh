@@ -116,14 +116,17 @@ fi
 
 echo ""
 
-# Шаг 5: Попытка сборки backend образа (быстрая проверка)
-echo -e "${BLUE}[5/5]${NC} ${YELLOW}Проверка сборки backend Dockerfile...${NC}"
-echo -e "${YELLOW}Внимание: Это может занять несколько минут${NC}"
+# Шаг 5: Попытка сборки backend образа (опционально)
+echo -e "${BLUE}[5/5]${NC} ${YELLOW}Проверка Docker (опционально)...${NC}"
 
-cd /app
-
-# Создаем временный Dockerfile для быстрой проверки синтаксиса
-cat > /tmp/test.Dockerfile << 'EOF'
+if command -v docker &> /dev/null; then
+    echo -e "${YELLOW}Docker найден, проверяем сборку образа...${NC}"
+    echo -e "${YELLOW}Внимание: Это может занять несколько минут${NC}"
+    
+    cd /app
+    
+    # Создаем временный Dockerfile для быстрой проверки синтаксиса
+    cat > /tmp/test.Dockerfile << 'EOF'
 FROM python:3.11-slim
 WORKDIR /app
 COPY backend/requirements.txt .
@@ -134,18 +137,22 @@ RUN ls -la *.py | head -10
 CMD ["echo", "Test successful"]
 EOF
 
-if docker build -f /tmp/test.Dockerfile -t market-test:latest . > /tmp/docker-build.log 2>&1; then
-    echo -e "${GREEN}✓${NC} Docker образ собирается успешно"
-    echo -e "${GREEN}✓${NC} Найдено Python файлов:"
-    tail -10 /tmp/docker-build.log | grep "\.py$" || echo "  (см. /tmp/docker-build.log)"
-    
-    # Очистка
-    docker rmi market-test:latest > /dev/null 2>&1 || true
+    if docker build -f /tmp/test.Dockerfile -t market-test:latest . > /tmp/docker-build.log 2>&1; then
+        echo -e "${GREEN}✓${NC} Docker образ собирается успешно"
+        echo -e "${GREEN}✓${NC} Найдено Python файлов:"
+        tail -10 /tmp/docker-build.log | grep "\.py$" || echo "  (см. /tmp/docker-build.log)"
+        
+        # Очистка
+        docker rmi market-test:latest > /dev/null 2>&1 || true
+    else
+        echo -e "${RED}✗${NC} Ошибка сборки Docker образа"
+        echo -e "${YELLOW}Последние строки лога:${NC}"
+        tail -20 /tmp/docker-build.log
+        exit 1
+    fi
 else
-    echo -e "${RED}✗${NC} Ошибка сборки Docker образа"
-    echo -e "${YELLOW}Последние строки лога:${NC}"
-    tail -20 /tmp/docker-build.log
-    exit 1
+    echo -e "${YELLOW}⚠${NC} Docker не установлен (это нормально в dev среде)"
+    echo -e "${YELLOW}⚠${NC} Проверка Docker будет выполнена на целевом сервере"
 fi
 
 # Итоговая статистика
