@@ -120,6 +120,32 @@ check_and_adjust_ports() {
     fi
 }
 
+# Исправление DNS
+fix_dns() {
+    echo ""
+    echo -e "${BLUE}[1.5/8]${NC} ${YELLOW}Настройка DNS...${NC}"
+    
+    # Добавляем Google DNS
+    if ! grep -q "8.8.8.8" /etc/resolv.conf; then
+        cp /etc/resolv.conf /etc/resolv.conf.backup 2>/dev/null || true
+        echo "nameserver 8.8.8.8" | cat - /etc/resolv.conf > /tmp/resolv.conf.tmp
+        echo "nameserver 8.8.4.4" >> /tmp/resolv.conf.tmp
+        echo "nameserver 1.1.1.1" >> /tmp/resolv.conf.tmp
+        cat /etc/resolv.conf >> /tmp/resolv.conf.tmp
+        mv /tmp/resolv.conf.tmp /etc/resolv.conf
+    fi
+    
+    # Настраиваем DNS для Docker
+    mkdir -p /etc/docker
+    cat > /etc/docker/daemon.json <<EOF
+{
+  "dns": ["8.8.8.8", "8.8.4.4", "1.1.1.1"]
+}
+EOF
+    
+    echo -e "${GREEN}✓ DNS настроен${NC}"
+}
+
 # Установка зависимостей (только если не установлены)
 install_dependencies() {
     echo ""
@@ -143,6 +169,10 @@ install_dependencies() {
         curl -fsSL https://get.docker.com | bash
         systemctl enable docker
         systemctl start docker
+        
+        # Перезапускаем Docker с DNS настройками
+        systemctl restart docker
+        sleep 3
     fi
     echo -e "${GREEN}✓ Docker доступен${NC}"
     
