@@ -206,8 +206,22 @@ clone_repository() {
         curl -fsSL https://raw.githubusercontent.com/wrx861/market/$GITHUB_BRANCH/frontend/tailwind.config.js -o ./frontend/tailwind.config.js 2>/dev/null || true
     fi
     
+    # Проверяем CSS файлы
+    if [ ! -f "./frontend/src/index.css" ]; then
+        echo -e "${RED}✗ src/index.css не найден!${NC}"
+        echo -e "${YELLOW}Скачиваю отдельно...${NC}"
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/$GITHUB_BRANCH/frontend/src/index.css -o ./frontend/src/index.css
+    fi
+    if [ ! -f "./frontend/src/App.css" ]; then
+        echo -e "${RED}✗ src/App.css не найден!${NC}"
+        echo -e "${YELLOW}Скачиваю отдельно...${NC}"
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/$GITHUB_BRANCH/frontend/src/App.css -o ./frontend/src/App.css
+    fi
+    
     echo -e "${GREEN}✓ Файлы frontend:${NC}"
     ls -la ./frontend/*.js ./frontend/*.json 2>/dev/null | tail -10
+    echo -e "${GREEN}✓ CSS файлы:${NC}"
+    ls -la ./frontend/src/*.css 2>/dev/null
     
     # Удаляем временную директорию
     rm -rf /tmp/market-clone
