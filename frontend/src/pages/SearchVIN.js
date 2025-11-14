@@ -251,7 +251,6 @@ const SearchVIN = ({ userData, onAddToCart, navigateTo }) => {
           </div>
         )}
       </div>
-      </div>
     </div>
   );
 };
