@@ -429,15 +429,18 @@ frontend:
 
   - task: "Telegram Bot - запуск и работа"
     implemented: true
-    working: "NA"
+    working: false
     file: "backend/telegram_bot.py, backend/start.sh, backend/Dockerfile"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "🤖 TELEGRAM BOT FIX: 1) ✅ Создан backend/start.sh для одновременного запуска uvicorn и telegram_bot.py, 2) ✅ Обновлен backend/Dockerfile: CMD изменен на bash start.sh, 3) ✅ start.sh запускает uvicorn в фоне и telegram_bot в foreground, 4) ✅ Логирование обоих процессов работает. Backend перезапущен. ТРЕБУЕТСЯ ТЕСТИРОВАНИЕ: проверить что Telegram бот отвечает на команды /start."
+      - working: false
+        agent: "testing"
+        comment: "❌ TELEGRAM BOT НЕ ЗАПУЩЕН КАК ОТДЕЛЬНЫЙ ПРОЦЕСС: Проведено тестирование согласно review request: 1) ✅ Backend API работает (2 процесса uvicorn найдены), 2) ❌ Telegram bot процесс НЕ найден (0 процессов telegram_bot.py), 3) ✅ Конфигурация корректна: TELEGRAM_BOT_TOKEN и REACT_APP_WEBAPP_URL найдены в .env, 4) ✅ Логи показывают активность: найдены сообщения 'telegram_bot.py' в backend.err.log, 5) ❌ ПРОБЛЕМА: Telegram bot не запускается как отдельный процесс через supervisor. ДИАГНОЗ: start.sh не используется supervisor'ом, нужно добавить telegram bot в supervisord.conf как отдельную программу или исправить запуск через start.sh. Критерии пройдены: 3/4."
 
   - task: "UI Cleanup - удаление баннера Made with Emergent"
     implemented: true
