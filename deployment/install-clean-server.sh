@@ -211,20 +211,45 @@ download_project() {
     
     # Скачивание frontend кода
     echo -e "${YELLOW}Скачивание frontend...${NC}"
-    mkdir -p $APP_DIR/frontend/src $APP_DIR/frontend/public
     cd $APP_DIR/frontend
+    
+    # Создание структуры папок
+    mkdir -p src/pages src/components/ui src/hooks src/lib src/utils public
+    
+    # Конфигурационные файлы
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/package.json -o package.json
     curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/yarn.lock -o yarn.lock
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/craco.config.js -o craco.config.js
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/tailwind.config.js -o tailwind.config.js
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/postcss.config.js -o postcss.config.js
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/jsconfig.json -o jsconfig.json
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/components.json -o components.json
     
-    # Скачивание всех файлов frontend/src
-    for file in App.js index.js; do
-        curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/$file -o src/$file 2>/dev/null || true
+    # Основные файлы src
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/App.js -o src/App.js
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/App.css -o src/App.css
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/index.js -o src/index.js
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/index.css -o src/index.css
+    
+    # Pages
+    for page in Home SearchArticle SearchVIN Garage AddVehicle VehicleDetail AddService ServiceLog AddLog BoardJournal AddReminder Reminders Expenses Diagnostics Cart Orders Admin; do
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/pages/${page}.js -o src/pages/${page}.js 2>/dev/null || true
     done
     
-    # Скачивание всех файлов frontend/public
-    for file in index.html manifest.json robots.txt; do
-        curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/public/$file -o public/$file 2>/dev/null || true
+    # Utils и Hooks
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/utils/telegram.js -o src/utils/telegram.js
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/hooks/use-toast.js -o src/hooks/use-toast.js
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/lib/utils.js -o src/lib/utils.js
+    
+    # UI Components (shadcn/ui)
+    for component in button card input label select badge avatar toast toaster tabs dialog alert separator; do
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/src/components/ui/${component}.jsx -o src/components/ui/${component}.jsx 2>/dev/null || true
     done
+    
+    # Public files
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/public/index.html -o public/index.html
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/public/manifest.json -o public/manifest.json 2>/dev/null || true
+    curl -fsSL https://raw.githubusercontent.com/wrx861/market/clean-main/frontend/public/robots.txt -o public/robots.txt 2>/dev/null || true
     
     echo -e "${GREEN}✓ Файлы проекта скачаны${NC}"
 }
