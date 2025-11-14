@@ -110,6 +110,7 @@ def deduplicate_and_prioritize(parts: list, availability_filter=None, sort_by=No
 rossko_client = RosskoClient()
 autostels_client = AutostelsClient()
 autotrade_client = AutotradeClient()
+berg_client = BergClient()
 oem_parser = AutotradeOEMParser()
 ai_client = OpenAIClient()
 partsapi_client = PartsApiClient()
