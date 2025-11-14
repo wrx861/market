@@ -62,5 +62,5 @@ COPY . .
 # Экспорт порта
 EXPOSE 8001
 
-# Запуск приложения
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
+# Запуск приложения (FastAPI + Telegram Bot)
+CMD ["bash", "start.sh"]
