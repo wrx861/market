@@ -227,6 +227,10 @@ input_credentials() {
     read -p "API ключ: " AUTOTRADE_API_KEY
     
     echo ""
+    echo -e "${YELLOW}Berg API${NC}"
+    read -p "BERG_API_KEY: " BERG_API_KEY
+    echo ""
+    
     echo -e "${YELLOW}PartsAPI.ru${NC}"
     read -p "PARTSAPI_KEY: " PARTSAPI_KEY
     
