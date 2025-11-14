@@ -302,6 +302,21 @@ check_status() {
     echo ""
     echo -e "${YELLOW}Логи frontend (последние 10 строк):${NC}"
     docker-compose -f $APP_DIR/docker-compose.yml logs --tail=10 frontend
+    
+    # Финальная проверка
+    echo ""
+    echo -e "${YELLOW}Выполнение финальной проверки...${NC}"
+    sleep 10
+    
+    # Проверяем что все контейнеры работают
+    RUNNING=$(docker-compose -f $APP_DIR/docker-compose.yml ps --format json 2>/dev/null | grep -c '"State":"running"' || docker-compose -f $APP_DIR/docker-compose.yml ps | grep -c "Up")
+    
+    if [ "$RUNNING" -ge 4 ]; then
+        echo -e "${GREEN}✓ Все контейнеры запущены успешно${NC}"
+    else
+        echo -e "${YELLOW}⚠ Внимание: запущено только $RUNNING контейнеров${NC}"
+        echo -e "${YELLOW}Проверьте логи: docker-compose -f $APP_DIR/docker-compose.yml logs${NC}"
+    fi
 }
 
 # Финальная информация
