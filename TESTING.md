@@ -2,7 +2,7 @@
 
 ## 🌐 Preview в браузере
 
-**URL:** https://vehicle-parts-tool.preview.emergentagent.com
+**URL:** https://parts-finder-33.preview.emergentagent.com
 
 ### Режим работы:
 - ✅ Работает в обычном браузере
@@ -86,7 +86,7 @@ Bot Settings → Menu Button
 
 Настройки:
 - Text: 🛒 Магазин
-- URL: https://vehicle-parts-tool.preview.emergentagent.com
+- URL: https://parts-finder-33.preview.emergentagent.com
 ```
 
 ### Функции в Telegram:
@@ -102,12 +102,12 @@ Bot Settings → Menu Button
 
 ### Health Check:
 ```bash
-curl https://vehicle-parts-tool.preview.emergentagent.com/api/health
+curl https://parts-finder-33.preview.emergentagent.com/api/health
 ```
 
 ### Создание пользователя:
 ```bash
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/users \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/users \
   -H "Content-Type: application/json" \
   -d '{
     "telegram_id": 123456789,
@@ -118,7 +118,7 @@ curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/users \
 
 ### Поиск по артикулу:
 ```bash
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/search/article \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/search/article \
   -H "Content-Type: application/json" \
   -d '{
     "article": "1K0505435Q",
@@ -128,7 +128,7 @@ curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/search/art
 
 ### Анализ VIN:
 ```bash
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/search/vin \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/search/vin \
   -H "Content-Type: application/json" \
   -d '{
     "vin": "XW8BJ21Z6AK253512",
@@ -138,7 +138,7 @@ curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/search/vin
 
 ### AI-поиск:
 ```bash
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/search/ai \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/search/ai \
   -H "Content-Type: application/json" \
   -d '{
     "vin": "XW8BJ21Z6AK253512",
@@ -150,10 +150,10 @@ curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/search/ai 
 ### Корзина:
 ```bash
 # Получить корзину
-curl https://vehicle-parts-tool.preview.emergentagent.com/api/cart/123456789
+curl https://parts-finder-33.preview.emergentagent.com/api/cart/123456789
 
 # Добавить товар
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/cart/add \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/cart/add \
   -H "Content-Type: application/json" \
   -d '{
     "telegram_id": 123456789,
@@ -171,7 +171,7 @@ curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/cart/add \
 
 ### Создание заказа:
 ```bash
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/orders \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "telegram_id": 123456789,
@@ -199,7 +199,7 @@ grep TELEGRAM_ADMIN_ID /app/backend/.env
 
 ```bash
 # Сначала добавьте товар в корзину
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/cart/add \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/cart/add \
   -H "Content-Type: application/json" \
   -d '{
     "telegram_id": 123456789,
@@ -215,7 +215,7 @@ curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/cart/add \
   }'
 
 # Теперь создайте заказ
-curl -X POST https://vehicle-parts-tool.preview.emergentagent.com/api/orders \
+curl -X POST https://parts-finder-33.preview.emergentagent.com/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "telegram_id": 123456789,

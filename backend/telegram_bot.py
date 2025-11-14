@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 # Get environment variables
 BOT_TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
-WEBAPP_URL = os.environ.get('REACT_APP_WEBAPP_URL', 'https://vehicle-parts-tool.preview.emergentagent.com')
+WEBAPP_URL = os.environ.get('REACT_APP_WEBAPP_URL', 'https://parts-finder-33.preview.emergentagent.com')
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
