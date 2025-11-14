@@ -195,16 +195,29 @@ async def search_by_article(request: SearchArticleRequest):
                 loop = asyncio.get_event_loop()
                 return await loop.run_in_executor(
                     None,
-                    lambda: autotrade_client.search_by_article(request.article, cross=True, replace=True)
+                    lambda: autotrade_client.search_by_article(request.article, cross=True, replace=False)
                 )
             except Exception as e:
                 logger.error(f"Autotrade search error: {str(e)}")
                 return []
         
-        # Запускаем оба поиска параллельно
-        rossko_parts, autotrade_parts = await asyncio.gather(
+        async def search_berg():
+            try:
+                # Для Berg используем синхронный метод в executor
+                loop = asyncio.get_event_loop()
+                return await loop.run_in_executor(
+                    None,
+                    lambda: berg_client.search_by_article(request.article, analogs=True)
+                )
+            except Exception as e:
+                logger.error(f"Berg search error: {str(e)}")
+                return []
+        
+        # Запускаем все три поиска параллельно
+        rossko_parts, autotrade_parts, berg_parts = await asyncio.gather(
             search_rossko(),
             search_autotrade(),
+            search_berg(),
             return_exceptions=True
         )
         
