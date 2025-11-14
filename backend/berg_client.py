@@ -135,6 +135,7 @@ class BergClient:
             # Базовая информация
             part_data = {
                 'supplier': 'Berg',
+                'provider': 'berg',  # Required for frontend filtering
                 'article': article,
                 'brand': brand_name,
                 'name': resource.get('name', ''),
