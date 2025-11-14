@@ -21,6 +21,7 @@ from models import (
 from rossko_client import RosskoClient
 from autostels_client import AutostelsClient
 from autotrade_client import AutotradeClient
+from berg_client import BergClient
 from autotrade_oem_parser import AutotradeOEMParser
 from openai_client import OpenAIClient
 # from gemini_client import GeminiClient  # Заменено на OpenAI
