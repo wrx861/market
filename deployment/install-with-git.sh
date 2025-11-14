@@ -329,6 +329,7 @@ print_info() {
 main() {
     check_root
     check_ports
+    fix_dns                    # Исправляем DNS ДО установки зависимостей
     install_dependencies
     input_credentials
     clone_repository
