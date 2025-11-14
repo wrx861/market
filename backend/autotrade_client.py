@@ -53,9 +53,9 @@ class AutotradeClient:
         article: str,
         with_stocks_and_prices: bool = True,
         with_delivery: bool = True,
-        cross: bool = False,
+        cross: bool = True,
         replace: bool = False,
-        strict: bool = True,
+        strict: bool = False,
         limit: int = 100
     ) -> List[Dict]:
         """
@@ -65,9 +65,9 @@ class AutotradeClient:
             article: Артикул для поиска
             with_stocks_and_prices: Получить информацию о наличии и ценах
             with_delivery: Получить информацию о сроках доставки
-            cross: Искать по кроссам (аналогам)
+            cross: Искать по кроссам (аналогам) - TRUE для показа аналогов
             replace: Искать по заменам
-            strict: Точный поиск (1 = только точные совпадения, 0 = расширенный поиск)
+            strict: Точный поиск (0 = с аналогами, 1 = только точное совпадение)
             limit: Максимальное количество результатов
             
         Returns:
