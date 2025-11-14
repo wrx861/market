@@ -427,6 +427,54 @@ frontend:
         agent: "main"
         comment: "🎯 РЕАЛИЗОВАНА АДМИН-ПАНЕЛЬ: 1) Создана модель ActivityLog для логирования всех действий пользователей, 2) Добавлены admin endpoints: /api/admin/activity (логи активности), /api/admin/users (список пользователей), /api/admin/stats (статистика), 3) Логирование происходит автоматически при: поиске по артикулу, добавлении в корзину, создании заказа, 4) Frontend: 3 вкладки (Активность, Пользователи, Статистика), 5) Показываются: telegram_id, username, name, действие, детали, время, 6) Доступ только для админа (ID из REACT_APP_ADMIN_ID), 7) Корзина пользователей сохраняется в MongoDB автоматически. Требуется тестирование админских endpoints и UI."
 
+  - task: "Telegram Bot - запуск и работа"
+    implemented: true
+    working: "NA"
+    file: "backend/telegram_bot.py, backend/start.sh, backend/Dockerfile"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "🤖 TELEGRAM BOT FIX: 1) ✅ Создан backend/start.sh для одновременного запуска uvicorn и telegram_bot.py, 2) ✅ Обновлен backend/Dockerfile: CMD изменен на bash start.sh, 3) ✅ start.sh запускает uvicorn в фоне и telegram_bot в foreground, 4) ✅ Логирование обоих процессов работает. Backend перезапущен. ТРЕБУЕТСЯ ТЕСТИРОВАНИЕ: проверить что Telegram бот отвечает на команды /start."
+
+  - task: "UI Cleanup - удаление баннера Made with Emergent"
+    implemented: true
+    working: true
+    file: "frontend/public/index.html"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "✅ UI CLEANUP ЗАВЕРШЕН: Удален баннер 'Made with Emergent' из frontend/public/index.html (строки с floating button, CSS и JS). Скриншот подтверждает что баннер отсутствует в UI."
+
+  - task: "Autotrade search logic - analogs and filtering"
+    implemented: true
+    working: "NA"
+    file: "backend/autotrade_client.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "🔧 AUTOTRADE SEARCH УЛУЧШЕН: 1) ✅ Включен поиск аналогов: cross=True в search_by_article, 2) ✅ strict=False для более широкого поиска, 3) ✅ Добавлена server-side фильтрация: проверка что article_number содержится в article_query (удаляет нерелевантные частичные совпадения), 4) ✅ Backend перезапущен. ТРЕБУЕТСЯ ТЕСТИРОВАНИЕ: проверить что поиск возвращает точный артикул + аналоги, но НЕ показывает нерелевантные частичные совпадения."
+
+  - task: "Berg API - интеграция нового поставщика"
+    implemented: true
+    working: "NA"
+    file: "backend/berg_client.py, backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "🏢 BERG SUPPLIER ADDED: 1) ✅ Создан backend/berg_client.py с методом search_by_article, 2) ✅ Интегрирован в server.py: добавлен в параллельный поиск с asyncio.gather, 3) ✅ BERG_API_KEY добавлен во все deployment скрипты (install-*.sh), 4) ✅ Используется та же структура ответа: article, brand, name, price, quantity, warehouse, delivery_days, in_stock, provider='berg', 5) ✅ Backend перезапущен. ТРЕБУЕТСЯ ТЕСТИРОВАНИЕ: проверить что Berg возвращает результаты в /api/search и корректно работает параллельный поиск с Rossko, Autotrade, Berg."
+
 metadata:
   created_by: "main_agent"
   version: "1.1"
