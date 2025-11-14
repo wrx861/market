@@ -477,16 +477,19 @@ frontend:
 
 metadata:
   created_by: "main_agent"
-  version: "1.1"
-  test_sequence: 2
+  version: "1.2"
+  test_sequence: 3
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Telegram Bot - запуск и работа"
+    - "Autotrade search logic - analogs and filtering"
+    - "Berg API - интеграция нового поставщика"
   stuck_tasks: 
     - "Autostels API - интеграция нового поставщика"
   test_all: false
-  test_priority: "completed"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "main"
