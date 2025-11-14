@@ -134,9 +134,22 @@ class AutotradeClient:
             items = result.get('items', [])
             logger.info(f"Autotrade returned {len(items)} items")
             
+            # Нормализуем артикул для сравнения (убираем пробелы, переводим в верхний регистр)
+            search_article_normalized = article.replace(' ', '').replace('-', '').upper()
+            
             # Преобразуем в единый формат
             parts = []
             for item in items:
+                # Фильтрация по точному совпадению артикула (если strict=True)
+                if strict:
+                    item_article = item.get('article', '')
+                    item_article_normalized = item_article.replace(' ', '').replace('-', '').upper()
+                    
+                    # Пропускаем если артикул не совпадает точно
+                    if item_article_normalized != search_article_normalized:
+                        logger.debug(f"Skipping item with non-matching article: {item_article} vs {article}")
+                        continue
+                
                 # Получаем информацию о складах (stocks, не stocks_and_prices!)
                 stocks_info = item.get('stocks', {})
                 
@@ -152,7 +165,7 @@ class AutotradeClient:
                     if part:
                         parts.append(part)
             
-            logger.info(f"Formatted {len(parts)} parts from Autotrade")
+            logger.info(f"Formatted {len(parts)} parts from Autotrade (after filtering)")
             return parts
             
         except requests.exceptions.Timeout:
