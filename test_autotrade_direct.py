@@ -10,7 +10,7 @@ import time
 def test_direct_autotrade():
     """Test the article directly and show full response"""
     
-    backend_url = "https://parts-finder-33.preview.emergentagent.com"
+    backend_url = "https://partfinder-app-1.preview.emergentagent.com"
     endpoint = f"{backend_url}/api/search/article"
     
     # Test the main article multiple times to see different warehouses
