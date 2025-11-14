@@ -186,7 +186,6 @@ const SearchVIN = ({ userData, onAddToCart, navigateTo }) => {
 
         {/* Vehicle Info */}
         {carInfo && (
-          <>
           <div className="bg-white rounded-lg shadow-md p-6 mb-4">
             <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
               <Car className="mr-2 text-green-600" />
