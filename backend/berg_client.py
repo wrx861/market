@@ -155,17 +155,21 @@ class BergClient:
                     3: 'Дополнительный склад'
                 }.get(warehouse_type, 'Неизвестно')
                 
+                quantity = int(offer.get('quantity', 0))
+                delivery_days = int(offer.get('average_period', 0))
+                
                 part_data.update({
                     'price': float(offer.get('price', 0)),
-                    'quantity': int(offer.get('quantity', 0)),
+                    'quantity': quantity,
                     'available_more': offer.get('available_more', False),
                     'reliability': float(offer.get('reliability', 0)),
-                    'delivery_days': int(offer.get('average_period', 0)),
+                    'delivery_days': delivery_days,
                     'delivery_days_max': int(offer.get('assured_period', 0)),
                     'is_transit': offer.get('is_transit', False),
                     'warehouse': warehouse_name,
                     'warehouse_type': warehouse_type_name,
                     'multiplication_factor': int(offer.get('multiplication_factor', 1)),
+                    'in_stock': quantity > 0 and delivery_days <= 1,  # Required for frontend
                 })
             else:
                 # Нет информации о наличии
