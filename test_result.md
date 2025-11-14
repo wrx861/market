@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Протестировать исправленный фильтр 'В наличии' для артикула ST-dtw1-395-0. Пользователь объяснил что delivery_period = 1 означает не 'под заказ', а просто что поставщик закрыт сейчас и откроется завтра утром. Товар физически есть на складе в Тюмени."
+user_problem_statement: "Протестировать последние изменения: 1) Telegram бот должен запускаться и отвечать на команды, 2) Баннер 'Made with Emergent' удален из UI, 3) Autotrade поиск с аналогами и улучшенной фильтрацией (cross=True, server-side filtering), 4) Новый поставщик Berg интегрирован в /api/search."
 
 backend:
   - task: "Market Auto Parts Garage - Vehicle Management CRUD"
