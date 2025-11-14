@@ -441,6 +441,7 @@ print_info() {
 main() {
     check_root
     check_and_adjust_ports
+    fix_dns                      # Исправляем DNS перед установкой
     install_dependencies
     input_credentials
     clone_repository
