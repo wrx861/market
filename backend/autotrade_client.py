@@ -53,8 +53,9 @@ class AutotradeClient:
         article: str,
         with_stocks_and_prices: bool = True,
         with_delivery: bool = True,
-        cross: bool = True,
-        replace: bool = True,
+        cross: bool = False,
+        replace: bool = False,
+        strict: bool = True,
         limit: int = 100
     ) -> List[Dict]:
         """
@@ -66,17 +67,19 @@ class AutotradeClient:
             with_delivery: Получить информацию о сроках доставки
             cross: Искать по кроссам (аналогам)
             replace: Искать по заменам
+            strict: Точный поиск (1 = только точные совпадения, 0 = расширенный поиск)
             limit: Максимальное количество результатов
             
         Returns:
             Список найденных запчастей
         """
-        logger.info(f"Searching Autotrade for article: {article}")
+        logger.info(f"Searching Autotrade for article: {article}, strict={strict}, cross={cross}, replace={replace}")
         
         try:
             # Формируем параметры запроса
             params = {
                 "q": article,
+                "strict": 1 if strict else 0,  # Точный поиск по артикулу
                 "page": 1,
                 "limit": limit,
                 "cross": 1 if cross else 0,
