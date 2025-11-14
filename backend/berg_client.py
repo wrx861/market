@@ -184,6 +184,7 @@ class BergClient:
                     'warehouse': 'Нет в наличии',
                     'warehouse_type': 'Неизвестно',
                     'multiplication_factor': 1,
+                    'in_stock': False,  # Required for frontend
                 })
             
             return part_data
