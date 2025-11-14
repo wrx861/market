@@ -146,6 +146,10 @@ input_credentials() {
     read -p "Введите API ключ: " AUTOTRADE_API_KEY
     echo ""
     
+    echo -e "${YELLOW}Berg API (поставщик запчастей)${NC}"
+    read -p "Введите BERG_API_KEY: " BERG_API_KEY
+    echo ""
+    
     echo -e "${YELLOW}PartsAPI.ru (поиск по VIN)${NC}"
     read -p "Введите PARTSAPI_KEY: " PARTSAPI_KEY
     echo ""
