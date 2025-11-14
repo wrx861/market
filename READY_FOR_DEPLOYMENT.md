@@ -10,8 +10,15 @@
 Нажмите кнопку **"Save to GitHub"** в интерфейсе Emergent
 
 ### Шаг 2: Разверните на сервере
-На вашем Ubuntu сервере выполните:
 
+**Если на сервере УЖЕ есть другие проекты (РЕКОМЕНДУЕТСЯ):**
+```bash
+wget https://raw.githubusercontent.com/wrx861/market/main/deployment/install-existing-server.sh
+chmod +x install-existing-server.sh
+sudo bash install-existing-server.sh
+```
+
+**Если это чистый новый сервер:**
 ```bash
 wget https://raw.githubusercontent.com/wrx861/market/main/deployment/install-with-git.sh
 chmod +x install-with-git.sh
