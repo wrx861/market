@@ -365,6 +365,7 @@ print_info() {
 main() {
     check_root
     check_ports
+    fix_dns                    # Исправляем DNS перед установкой
     install_dependencies
     create_directories
     input_credentials
