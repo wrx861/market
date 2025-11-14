@@ -134,21 +134,31 @@ class AutotradeClient:
             items = result.get('items', [])
             logger.info(f"Autotrade returned {len(items)} items")
             
-            # Нормализуем артикул для сравнения (убираем пробелы, переводим в верхний регистр)
+            # Нормализуем артикул для сравнения (убираем пробелы, дефисы, переводим в верхний регистр)
             search_article_normalized = article.replace(' ', '').replace('-', '').upper()
             
             # Преобразуем в единый формат
             parts = []
             for item in items:
-                # Фильтрация по точному совпадению артикула (если strict=True)
-                if strict:
-                    item_article = item.get('article', '')
-                    item_article_normalized = item_article.replace(' ', '').replace('-', '').upper()
-                    
-                    # Пропускаем если артикул не совпадает точно
-                    if item_article_normalized != search_article_normalized:
-                        logger.debug(f"Skipping item with non-matching article: {item_article} vs {article}")
-                        continue
+                item_article = item.get('article', '')
+                item_article_normalized = item_article.replace(' ', '').replace('-', '').upper()
+                
+                # Умная фильтрация: пропускаем только явно неподходящие артикулы
+                # Проверяем что артикул содержит основную часть поискового запроса (без префиксов типа ST-)
+                # Это позволит найти и A2761800009 и ST-A2761800009
+                
+                # Убираем общие префиксы для проверки совпадения
+                search_core = search_article_normalized.lstrip('ST').lstrip('OE').lstrip('OEM')
+                item_core = item_article_normalized.lstrip('ST').lstrip('OE').lstrip('OEM')
+                
+                # Пропускаем только если артикулы совсем не похожи (нет общей части длиной хотя бы 5 символов)
+                if len(search_core) >= 5 and len(item_core) >= 5:
+                    # Проверяем что есть существенное пересечение
+                    if search_core not in item_core and item_core not in search_core:
+                        # Дополнительная проверка: может быть это обратная ситуация (с префиксами)
+                        if search_article_normalized not in item_article_normalized and item_article_normalized not in search_article_normalized:
+                            logger.debug(f"Skipping unrelated item: {item_article} (searching for {article})")
+                            continue
                 
                 # Получаем информацию о складах (stocks, не stocks_and_prices!)
                 stocks_info = item.get('stocks', {})
