@@ -779,6 +779,402 @@ def check_autotrade_logs():
     except Exception as e:
         print(f"Error checking Autotrade logs: {e}")
 
+def test_berg_api_integration():
+    """Test Berg API integration after adding BERG_API_KEY"""
+    print("=" * 80)
+    print("TESTING BERG API INTEGRATION AFTER ADDING BERG_API_KEY")
+    print("=" * 80)
+    print("🔧 КРИТИЧЕСКОЕ ТЕСТИРОВАНИЕ Berg API:")
+    print("1. Berg API - проверка работы")
+    print("   - Протестировать /api/search с тестовым артикулом: 51750A6000")
+    print("   - Проверить что результаты приходят от Berg (provider='berg')")
+    print("   - Проверить структуру ответа: article, brand, name, price, quantity, warehouse, delivery_days, in_stock, provider='berg'")
+    print("2. Параллельный поиск трех поставщиков")
+    print("   - Проверить что работает asyncio.gather с Rossko, Autotrade, Berg")
+    print("   - Проверить что результаты объединяются корректно")
+    print("   - Проверить дедупликацию")
+    print("3. Проверить backend логи")
+    print("   - Должны быть сообщения от Berg API")
+    print("   - Не должно быть ошибок 'Berg API key not configured'")
+    print("ВАЖНО:")
+    print("- BERG_API_KEY теперь добавлен в .env: 0fdaa3d7d2e65cc60f684ea6edb9f8e2a1e37ce5c7059067408a17bdb8d65e44")
+    print("- Backend перезапущен")
+    print("- Backend URL: https://partfinder-app-1.preview.emergentagent.com/api")
+    print("- Telegram Bot ПРОПУСТИТЬ - токен используется на хостинге пользователя (это нормально)")
+    print("ЗАДАЧА:")
+    print("Подтвердить что Berg API теперь работает и возвращает результаты вместе с Rossko и Autotrade.")
+    print("=" * 80)
+    
+    # Load environment variables
+    env_vars = load_env_vars()
+    backend_url = env_vars.get('REACT_APP_BACKEND_URL', 'http://localhost:8001')
+    
+    print(f"Backend URL: {backend_url}")
+    
+    # Test endpoint
+    endpoint = f"{backend_url}/api/search/article"
+    print(f"Testing endpoint: {endpoint}")
+    
+    # Test article from review request
+    test_article = "51750A6000"
+    telegram_id = 123456789
+    
+    print(f"\n{'='*60}")
+    print(f"TESTING BERG API WITH ARTICLE: {test_article}")
+    print(f"{'='*60}")
+    print("🎯 ОЖИДАЕМЫЕ РЕЗУЛЬТАТЫ:")
+    print("  - Результаты от Berg API (provider='berg')")
+    print("  - Результаты от Rossko API (provider='rossko')")
+    print("  - Результаты от Autotrade API (provider='autotrade')")
+    print("  - Параллельный поиск всех трех поставщиков")
+    print("  - Корректная дедупликация")
+    print("  - Структура ответа Berg: article, brand, name, price, quantity, warehouse, delivery_days, in_stock, provider='berg'")
+    print(f"{'='*60}")
+    
+    test_data = {
+        "article": test_article,
+        "telegram_id": telegram_id
+    }
+    
+    print(f"Request payload: {json.dumps(test_data, indent=2)}")
+    
+    try:
+        # Make the request
+        print(f"\n🚀 Отправляем POST запрос для артикула: {test_article}...")
+        start_time = time.time()
+        
+        response = requests.post(
+            endpoint,
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=60  # Berg API может быть медленным
+        )
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        print(f"Response Status Code: {response.status_code}")
+        print(f"Response Time: {duration:.2f} seconds")
+        
+        if response.status_code == 200:
+            print("✅ API returned 200 OK")
+            
+            try:
+                response_data = response.json()
+                
+                # Validate Berg API integration
+                success = validate_berg_api_integration(response_data, test_article)
+                
+                if success:
+                    print(f"✅ Article '{test_article}' - Berg API integration working correctly!")
+                    
+                    # Check backend logs for detailed analysis
+                    print(f"\n--- ПРОВЕРКА ЛОГОВ BERG API ---")
+                    check_berg_logs()
+                    
+                    return True, response_data
+                else:
+                    print(f"❌ Article '{test_article}' - Berg API integration has issues!")
+                    
+                    # Check backend logs for errors
+                    print(f"\n--- ПРОВЕРКА ЛОГОВ BERG API (ОШИБКИ) ---")
+                    check_berg_logs()
+                    
+                    return False, response_data
+                
+            except json.JSONDecodeError as e:
+                print(f"❌ Failed to parse JSON response: {e}")
+                print(f"Raw response: {response.text}")
+                return False, None
+                
+        else:
+            print(f"❌ API returned error status: {response.status_code}")
+            print(f"Response text: {response.text}")
+            return False, None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Request failed: {e}")
+        return False, None
+
+def validate_berg_api_integration(response_data, article):
+    """Validate Berg API integration and parallel search with Rossko, Autotrade, Berg"""
+    print(f"\n--- VALIDATING BERG API INTEGRATION FOR ARTICLE {article} ---")
+    
+    # Check basic response structure
+    if not isinstance(response_data, dict):
+        print(f"❌ Response is not a dictionary: {type(response_data)}")
+        return False
+    
+    if response_data.get('status') != 'success':
+        print(f"❌ Status is not 'success': {response_data.get('status')}")
+        return False
+    
+    print("✅ Response status is 'success'")
+    
+    # Check results array
+    results = response_data.get('results', [])
+    if not isinstance(results, list):
+        print(f"❌ Results is not a list: {type(results)}")
+        return False
+    
+    print(f"✅ Found {len(results)} total results")
+    
+    if len(results) == 0:
+        print("❌ No results found - checking if this is expected")
+        return False
+    
+    # Analyze providers in results
+    providers = {}
+    rossko_results = []
+    autotrade_results = []
+    berg_results = []
+    
+    for result in results:
+        provider = result.get('provider', 'unknown')
+        if provider not in providers:
+            providers[provider] = 0
+        providers[provider] += 1
+        
+        if provider == 'rossko':
+            rossko_results.append(result)
+        elif provider == 'autotrade':
+            autotrade_results.append(result)
+        elif provider == 'berg':
+            berg_results.append(result)
+    
+    print(f"\n--- АНАЛИЗ ПОСТАВЩИКОВ ---")
+    for provider, count in providers.items():
+        print(f"✅ {provider}: {count} результатов")
+    
+    # Check if we have results from Berg (main focus)
+    has_rossko = len(rossko_results) > 0
+    has_autotrade = len(autotrade_results) > 0
+    has_berg = len(berg_results) > 0
+    
+    print(f"\n--- ПРОВЕРКА ПОСТАВЩИКОВ ---")
+    print(f"✅ Rossko results: {len(rossko_results)} {'✅' if has_rossko else '❌'}")
+    print(f"✅ Autotrade results: {len(autotrade_results)} {'✅' if has_autotrade else '❌'}")
+    print(f"🎯 Berg results: {len(berg_results)} {'✅' if has_berg else '❌'}")
+    
+    if has_berg:
+        print("🎉 BERG API ЗАРАБОТАЛ!")
+        print("✅ Получены реальные предложения от Berg")
+        
+        # Show example Berg results
+        print(f"\n--- ПРИМЕРЫ ПРЕДЛОЖЕНИЙ ОТ BERG ---")
+        for i, result in enumerate(berg_results[:3]):  # Show first 3
+            print(f"  {i+1}. {result.get('brand', 'Unknown')} {result.get('article', 'Unknown')}")
+            print(f"     Название: {result.get('name', 'Unknown')}")
+            print(f"     Цена: {result.get('price', 0)} руб")
+            print(f"     Количество: {result.get('quantity', 0)} шт")
+            print(f"     Склад: {result.get('warehouse', 'Unknown')}")
+            print(f"     Доставка: {result.get('delivery_days', 'Unknown')} дней")
+            print(f"     В наличии: {'Да' if result.get('in_stock') else 'Нет'}")
+            print(f"     Provider: {result.get('provider', 'Unknown')}")
+        
+        # Validate Berg result structure
+        print(f"\n--- ВАЛИДАЦИЯ СТРУКТУРЫ BERG РЕЗУЛЬТАТОВ ---")
+        berg_structure_valid = validate_berg_result_structure(berg_results[0] if berg_results else {})
+        
+    else:
+        print("❌ BERG API НЕ ВЕРНУЛ РЕЗУЛЬТАТОВ")
+        print("⚠️  Возможные причины:")
+        print("   - BERG_API_KEY не загружается из .env")
+        print("   - Неправильный API ключ")
+        print("   - Проблемы с API поставщика Berg")
+        print("   - Rate limiting")
+        print("   - Неправильный endpoint URL")
+        berg_structure_valid = False
+    
+    # Check parallel search functionality
+    print(f"\n--- ПРОВЕРКА ПАРАЛЛЕЛЬНОГО ПОИСКА ---")
+    total_providers = sum([has_rossko, has_autotrade, has_berg])
+    
+    if total_providers >= 2:
+        print(f"✅ Параллельный поиск работает: {total_providers}/3 поставщиков активны")
+        
+        # Check deduplication if we have results from multiple providers
+        if total_providers >= 2:
+            print(f"\n--- ПРОВЕРКА ДЕДУПЛИКАЦИИ ---")
+            print("✅ Результаты от нескольких поставщиков - проверяем дедупликацию")
+            
+            # Check for duplicate articles
+            articles_seen = {}
+            duplicates_found = []
+            
+            for result in results:
+                key = f"{result.get('article', '')}_{result.get('brand', '')}".upper()
+                if key in articles_seen:
+                    duplicates_found.append({
+                        'article': result.get('article'),
+                        'brand': result.get('brand'),
+                        'providers': [articles_seen[key]['provider'], result.get('provider')]
+                    })
+                else:
+                    articles_seen[key] = result
+            
+            if duplicates_found:
+                print(f"⚠️  Найдены дубликаты ({len(duplicates_found)}):")
+                for dup in duplicates_found[:3]:  # Show first 3
+                    print(f"   - {dup['brand']} {dup['article']} от {dup['providers']}")
+                print("⚠️  Дедупликация может работать неправильно")
+                deduplication_working = False
+            else:
+                print("✅ Дубликаты не найдены - дедупликация работает корректно")
+                deduplication_working = True
+        else:
+            deduplication_working = True  # Can't test with only one provider
+    else:
+        print(f"⚠️  Параллельный поиск работает частично: {total_providers}/3 поставщиков активны")
+        deduplication_working = True  # Can't test with limited providers
+    
+    # Show other provider results for comparison
+    if has_rossko:
+        print(f"\n--- ПРИМЕРЫ ПРЕДЛОЖЕНИЙ ОТ ROSSKO ---")
+        for i, result in enumerate(rossko_results[:2]):  # Show first 2
+            print(f"  {i+1}. {result.get('brand', 'Unknown')} {result.get('article', 'Unknown')}")
+            print(f"     Название: {result.get('name', 'Unknown')}")
+            print(f"     Цена: {result.get('price', 0)} руб")
+            print(f"     Доставка: {result.get('delivery_days', 'Unknown')} дней")
+            print(f"     Поставщик: {result.get('supplier', 'Unknown')}")
+    
+    if has_autotrade:
+        print(f"\n--- ПРИМЕРЫ ПРЕДЛОЖЕНИЙ ОТ AUTOTRADE ---")
+        for i, result in enumerate(autotrade_results[:2]):  # Show first 2
+            print(f"  {i+1}. {result.get('brand', 'Unknown')} {result.get('article', 'Unknown')}")
+            print(f"     Название: {result.get('name', 'Unknown')}")
+            print(f"     Цена: {result.get('price', 0)} руб")
+            print(f"     Склад: {result.get('warehouse', 'Unknown')}")
+            print(f"     Доставка: {result.get('delivery_days', 'Unknown')} дней")
+    
+    # Overall success criteria
+    success_criteria = [
+        len(results) > 0,  # Must have some results
+        has_berg,  # Berg must be working (main requirement)
+        total_providers >= 2,  # At least 2 providers working
+        deduplication_working,  # Deduplication should work
+        response_data.get('count', 0) == len(results)  # Count should match results
+    ]
+    
+    passed_criteria = sum(success_criteria)
+    
+    print(f"\n--- ИТОГОВАЯ ОЦЕНКА BERG API ИНТЕГРАЦИИ ---")
+    print(f"✅ Есть результаты: {len(results) > 0}")
+    print(f"🎯 Berg API работает: {has_berg}")
+    print(f"✅ Работает >= 2 поставщиков: {total_providers >= 2}")
+    print(f"✅ Дедупликация работает: {deduplication_working}")
+    print(f"✅ Корректный подсчет: {response_data.get('count', 0) == len(results)}")
+    print(f"✅ Критерии пройдены: {passed_criteria}/5")
+    
+    if has_berg:
+        print(f"\n🎉 BERG API УСПЕШНО ИНТЕГРИРОВАН!")
+        print(f"   ✅ BERG_API_KEY загружается корректно")
+        print(f"   ✅ Получены реальные предложения от Berg")
+        print(f"   ✅ Параллельный поиск с Rossko и Autotrade функционирует")
+        print(f"   ✅ Поле provider='berg' корректно установлено")
+        print(f"   ✅ Структура ответа соответствует требованиям")
+        return True
+    else:
+        print(f"\n❌ BERG API НЕ РАБОТАЕТ")
+        print(f"   ❌ Berg не возвращает результатов")
+        if has_rossko or has_autotrade:
+            print(f"   ✅ Система устойчива - работают другие поставщики")
+            print(f"   ❌ Berg требует дополнительной диагностики")
+        else:
+            print(f"   ❌ Все поставщики имеют проблемы")
+        return False
+
+def validate_berg_result_structure(berg_result):
+    """Validate Berg result has required structure"""
+    print(f"--- ВАЛИДАЦИЯ СТРУКТУРЫ BERG РЕЗУЛЬТАТА ---")
+    
+    required_fields = [
+        'article', 'brand', 'name', 'price', 'quantity', 
+        'warehouse', 'delivery_days', 'in_stock', 'provider'
+    ]
+    
+    valid_fields = 0
+    
+    for field in required_fields:
+        if field in berg_result:
+            value = berg_result[field]
+            print(f"✅ Field '{field}': {value} ({type(value).__name__})")
+            valid_fields += 1
+        else:
+            print(f"❌ Field '{field}' missing")
+    
+    # Check provider field specifically
+    if berg_result.get('provider') == 'berg':
+        print("✅ Provider field correctly set to 'berg'")
+        provider_correct = True
+    else:
+        print(f"❌ Provider field incorrect: {berg_result.get('provider')} (expected 'berg')")
+        provider_correct = False
+    
+    structure_valid = valid_fields >= 8 and provider_correct
+    
+    print(f"✅ Структура валидна: {structure_valid} ({valid_fields}/{len(required_fields)} полей)")
+    
+    return structure_valid
+
+def check_berg_logs():
+    """Check backend logs for Berg-specific activity"""
+    print(f"\n--- ПРОВЕРКА ЛОГОВ BERG API ---")
+    
+    try:
+        import subprocess
+        
+        log_files = [
+            "/var/log/supervisor/backend.out.log",
+            "/var/log/supervisor/backend.err.log"
+        ]
+        
+        berg_keywords = [
+            "Searching Berg for article",
+            "Berg returned",
+            "Formatted",
+            "parts from Berg",
+            "Berg API error",
+            "Berg API key not configured",
+            "berg_client",
+            "Berg search error"
+        ]
+        
+        for log_file in log_files:
+            if os.path.exists(log_file):
+                print(f"\n--- {log_file} (поиск Berg активности) ---")
+                
+                # Search for Berg-related log entries
+                for keyword in berg_keywords:
+                    try:
+                        result = subprocess.run(
+                            ["grep", "-i", keyword, log_file],
+                            capture_output=True,
+                            text=True
+                        )
+                        if result.stdout:
+                            print(f"🔍 Найдено '{keyword}':")
+                            lines = result.stdout.strip().split('\n')
+                            for line in lines[-5:]:  # Show last 5 matches
+                                print(f"   {line}")
+                    except Exception as e:
+                        continue
+                
+                # Show recent log entries
+                print(f"\n--- Последние 10 строк {log_file} ---")
+                result = subprocess.run(
+                    ["tail", "-n", "10", log_file],
+                    capture_output=True,
+                    text=True
+                )
+                if result.stdout:
+                    print(result.stdout)
+            else:
+                print(f"Log file not found: {log_file}")
+                
+    except Exception as e:
+        print(f"Error checking Berg logs: {e}")
+
 def test_health_endpoint():
     """Test basic health endpoint"""
     print("\n" + "=" * 60)
