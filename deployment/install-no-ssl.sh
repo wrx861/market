@@ -216,6 +216,26 @@ clone_repository() {
     # Копируем deployment файлы
     cp /tmp/market-clone/deployment/docker-compose.yml ./
     
+    # Проверяем что важные файлы скопировались
+    echo -e "${YELLOW}Проверка скопированных файлов...${NC}"
+    if [ ! -f "./frontend/craco.config.js" ]; then
+        echo -e "${RED}✗ craco.config.js не найден!${NC}"
+        echo -e "${YELLOW}Скачиваю отдельно...${NC}"
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/$GITHUB_BRANCH/frontend/craco.config.js -o ./frontend/craco.config.js
+    fi
+    if [ ! -f "./frontend/jsconfig.json" ]; then
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/$GITHUB_BRANCH/frontend/jsconfig.json -o ./frontend/jsconfig.json 2>/dev/null || true
+    fi
+    if [ ! -f "./frontend/postcss.config.js" ]; then
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/$GITHUB_BRANCH/frontend/postcss.config.js -o ./frontend/postcss.config.js 2>/dev/null || true
+    fi
+    if [ ! -f "./frontend/tailwind.config.js" ]; then
+        curl -fsSL https://raw.githubusercontent.com/wrx861/market/$GITHUB_BRANCH/frontend/tailwind.config.js -o ./frontend/tailwind.config.js 2>/dev/null || true
+    fi
+    
+    echo -e "${GREEN}✓ Файлы frontend:${NC}"
+    ls -la ./frontend/*.js ./frontend/*.json 2>/dev/null | tail -10
+    
     # Создаем простой nginx.conf без SSL
     cat > $APP_DIR/nginx/nginx.conf << 'NGINX_EOF'
 events {
