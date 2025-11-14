@@ -1,0 +1,58 @@
+version: '3.8'
+
+# Тестовый docker-compose для локальной проверки
+# Использует минимальную конфигурацию без SSL и Nginx
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: market-mongodb-test
+    restart: unless-stopped
+    volumes:
+      - /tmp/market-test-db:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=market_db
+    networks:
+      - market-test-network
+    ports:
+      - "27018:27017"
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../deployment/backend.Dockerfile
+    container_name: market-backend-test
+    restart: unless-stopped
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=market_db
+      - CORS_ORIGINS=*
+      - TELEGRAM_BOT_TOKEN=test_token
+      - TELEGRAM_ADMIN_ID=123456789
+      - GOOGLE_API_KEY=test_key
+      - ROSSKO_API_KEY1=test_key1
+      - ROSSKO_API_KEY2=test_key2
+      - ROSSKO_API_URL=http://api.rossko.ru/service/v2.1/GetSearch
+      - AUTOTRADE_LOGIN=test@test.com
+      - AUTOTRADE_PASSWORD=test_pass
+      - AUTOTRADE_API_KEY=test_key
+      - PARTSAPI_KEY=test_key
+      - OPENAI_API_KEY=test_key
+      - REACT_APP_WEBAPP_URL=http://localhost:3001
+      - PLAYWRIGHT_BROWSERS_PATH=/pw-browsers
+    depends_on:
+      - mongodb
+    networks:
+      - market-test-network
+    ports:
+      - "8002:8001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  market-test-network:
+    driver: bridge
