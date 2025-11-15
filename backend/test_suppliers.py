@@ -55,11 +55,7 @@ async def test_all_suppliers():
     # Autotrade
     print("📦 AUTOTRADE:")
     try:
-        autotrade = AutotradeClient(
-            os.environ['AUTOTRADE_LOGIN'],
-            os.environ['AUTOTRADE_PASSWORD'],
-            os.environ['AUTOTRADE_API_KEY']
-        )
+        autotrade = AutotradeClient()
         autotrade_results = await autotrade.search_by_article(article)
         
         in_stock = [r for r in autotrade_results if r.get('in_stock', False)]
