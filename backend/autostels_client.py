@@ -98,33 +98,36 @@ class AutostelsClient:
             logger.error(f"Error parsing step1 response: {str(e)}")
             return []
     
-    def search_step2(self, product_id: str, in_stock: int = 1, show_cross: int = 1) -> List[Dict]:
+    def search_step2(self, product_id: str, in_stock: int = 1, show_cross: int = 2) -> List[Dict]:
         """
         Шаг 2: Получение предложений по product_id
         in_stock: 1 - все предложения, 2 - только в наличии
-        show_cross: 0 - без аналогов, 1 - с аналогами
+        show_cross: 1 - без аналогов, 2 - с аналогами
         """
         try:
+            # Формируем XML параметры для CDATA (согласно документации v3.6)
+            search_params = f"""<root>
+   {self._create_session_info()}
+   <Search>
+      <ProductID>{product_id}</ProductID>
+      <StocksOnly>0</StocksOnly>
+      <InStock>{in_stock}</InStock>
+      <ShowCross>{show_cross}</ShowCross>
+      <PeriodMin>-1</PeriodMin>
+      <PeriodMax>-1</PeriodMax>
+   </Search>
+</root>"""
+            
+            # Формируем SOAP запрос с CDATA (как в документации)
             soap_body = f"""<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-               xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
-               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <SearchOfferStep2 xmlns="http://tempuri.org/">
-      <request>
-        <root>
-          {self._create_session_info()}
-          <Search>
-            <ProductID>{product_id}</ProductID>
-            <StocksOnly>0</StocksOnly>
-            <InStock>{in_stock}</InStock>
-            <ShowCross>{show_cross}</ShowCross>
-          </Search>
-        </root>
-      </request>
-    </SearchOfferStep2>
-  </soap:Body>
-</soap:Envelope>"""
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <tem:SearchOfferStep2>
+         <tem:SearchParametersXml><![CDATA[{search_params}]]></tem:SearchParametersXml>
+      </tem:SearchOfferStep2>
+   </soapenv:Body>
+</soapenv:Envelope>"""
             
             headers = {
                 'Content-Type': 'text/xml; charset=utf-8',
