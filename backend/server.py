@@ -437,10 +437,13 @@ async def search_by_vin(request: SearchVINRequest):
         # Получаем группы каталога
         catalog_groups = partsapi_client.get_catalog_groups(request.vin)
         
-        # Дополнительный анализ через AI
-        if car_info.get('make'):
-            enhanced_info = ai_client.analyze_car_info(car_info)
-            car_info.update(enhanced_info)
+        # Дополнительный анализ через AI (если доступен)
+        if car_info.get('make') and ai_client:
+            try:
+                enhanced_info = ai_client.analyze_car_info(car_info)
+                car_info.update(enhanced_info)
+            except Exception as e:
+                logger.warning(f"AI analysis failed: {str(e)}")
         
         # Сохраняем историю поиска
         user = await db.users.find_one({"telegram_id": request.telegram_id}, {"_id": 0})
