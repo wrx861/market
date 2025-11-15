@@ -143,22 +143,28 @@ class AutotradeClient:
                 item_article = item.get('article', '')
                 item_article_normalized = item_article.replace(' ', '').replace('-', '').upper()
                 
-                # Умная фильтрация: пропускаем только явно неподходящие артикулы
-                # Проверяем что артикул содержит основную часть поискового запроса (без префиксов типа ST-)
-                # Это позволит найти и A2761800009 и ST-A2761800009
+                # Легкая фильтрация: пропускаем только явно неподходящие артикулы
+                # Проверяем что есть хоть какое-то пересечение (аналоги и кроссы могут сильно отличаться)
+                # Минимальная длина общей части - 4 символа
                 
-                # Убираем общие префиксы для проверки совпадения
-                search_core = search_article_normalized.lstrip('ST').lstrip('OE').lstrip('OEM')
-                item_core = item_article_normalized.lstrip('ST').lstrip('OE').lstrip('OEM')
+                # Простая проверка: если совсем разные артикулы (нет общей части >= 4 символов)
+                has_match = False
                 
-                # Пропускаем только если артикулы совсем не похожи (нет общей части длиной хотя бы 5 символов)
-                if len(search_core) >= 5 and len(item_core) >= 5:
-                    # Проверяем что есть существенное пересечение
-                    if search_core not in item_core and item_core not in search_core:
-                        # Дополнительная проверка: может быть это обратная ситуация (с префиксами)
-                        if search_article_normalized not in item_article_normalized and item_article_normalized not in search_article_normalized:
-                            logger.debug(f"Skipping unrelated item: {item_article} (searching for {article})")
-                            continue
+                # Проверка 1: Прямое вхождение
+                if search_article_normalized in item_article_normalized or item_article_normalized in search_article_normalized:
+                    has_match = True
+                
+                # Проверка 2: Поиск общей подстроки длиной >= 4 символа
+                if not has_match and len(search_article_normalized) >= 4 and len(item_article_normalized) >= 4:
+                    for i in range(len(search_article_normalized) - 3):
+                        substr = search_article_normalized[i:i+4]
+                        if substr in item_article_normalized:
+                            has_match = True
+                            break
+                
+                if not has_match:
+                    logger.debug(f"Skipping unrelated item: {item_article} (searching for {article})")
+                    continue
                 
                 # Получаем информацию о складах (stocks, не stocks_and_prices!)
                 stocks_info = item.get('stocks', {})
