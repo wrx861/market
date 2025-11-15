@@ -118,13 +118,13 @@ try:
     ai_client = OpenAIClient()
 except ValueError:
     ai_client = None
-    logger.warning("OpenAI client not initialized - OPENAI_API_KEY not provided")
+    print("⚠️  OpenAI client not initialized - OPENAI_API_KEY not provided")
 
 try:
     partsapi_client = PartsApiClient()
 except (ValueError, Exception) as e:
     partsapi_client = None
-    logger.warning(f"PartsAPI client not initialized: {str(e)}")
+    print(f"⚠️  PartsAPI client not initialized: {str(e)}")
 
 telegram_notifier = TelegramNotifier()
 
