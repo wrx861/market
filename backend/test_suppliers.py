@@ -56,7 +56,11 @@ async def test_all_suppliers():
     print("📦 AUTOTRADE:")
     try:
         autotrade = AutotradeClient()
-        autotrade_results = await autotrade.search_by_article(article)
+        loop = asyncio.get_event_loop()
+        autotrade_results = await loop.run_in_executor(
+            None, 
+            lambda: autotrade.search_by_article(article)
+        )
         
         in_stock = [r for r in autotrade_results if r.get('in_stock', False)]
         on_order = [r for r in autotrade_results if not r.get('in_stock', False)]
