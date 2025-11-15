@@ -125,64 +125,39 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
         
         result = list(grouped.values())
     else:
-        # Дедупликация: для каждого артикул + бренд оставляем максимум 2 позиции
-        # 1) самая дешевая, 2) самая быстрая доставка (если это разные предложения)
+        # Дедупликация: для каждого уникального артикула оставляем ОДНУ лучшую позицию
+        # Лучшая = самая дешевая, при равной цене - самая быстрая
         grouped = {}
         
         for part in parts:
-            # Нормализуем артикул для группировки
+            # Нормализуем артикул для группировки (игнорируем бренд - один артикул от любого поставщика)
             article_normalized = normalize_article(part['article'])
-            brand = part.get('brand', 'UNKNOWN').upper()
-            key = f"{article_normalized}_{brand}"
             
-            if key not in grouped:
-                # Инициализируем с первым найденным
-                grouped[key] = {
-                    'cheapest': part,
-                    'fastest': part,
-                    'all': [part]
-                }
+            if article_normalized not in grouped:
+                # Первая позиция для этого артикула
+                grouped[article_normalized] = part
             else:
-                grouped[key]['all'].append(part)
+                # Сравниваем с существующей позицией
+                existing = grouped[article_normalized]
                 
-                # Обновляем самую дешевую
-                cheapest = grouped[key]['cheapest']
-                if part['price'] < cheapest['price']:
-                    grouped[key]['cheapest'] = part
-                elif part['price'] == cheapest['price']:
-                    # При равной цене берем с большим количеством
-                    if part.get('quantity', 0) > cheapest.get('quantity', 0):
-                        grouped[key]['cheapest'] = part
+                # Выбираем лучшую по критериям:
+                # 1. Самая дешевая
+                # 2. При равной цене - самая быстрая доставка
+                # 3. При равной цене и доставке - с большим количеством
                 
-                # Обновляем самую быструю доставку
-                fastest = grouped[key]['fastest']
-                if part['delivery_days'] < fastest['delivery_days']:
-                    grouped[key]['fastest'] = part
-                elif part['delivery_days'] == fastest['delivery_days']:
-                    # При равной доставке берем дешевле
-                    if part['price'] < fastest['price']:
-                        grouped[key]['fastest'] = part
+                if part['price'] < existing['price']:
+                    # Дешевле - заменяем
+                    grouped[article_normalized] = part
+                elif part['price'] == existing['price']:
+                    # Цена равна - сравниваем по доставке
+                    if part['delivery_days'] < existing['delivery_days']:
+                        grouped[article_normalized] = part
+                    elif part['delivery_days'] == existing['delivery_days']:
+                        # И цена и доставка равны - берем с большим количеством
+                        if part.get('quantity', 0) > existing.get('quantity', 0):
+                            grouped[article_normalized] = part
         
-        # Собираем результат: дешевую + быструю (если разные)
-        result = []
-        for key, data in grouped.items():
-            cheapest = data['cheapest']
-            fastest = data['fastest']
-            
-            # Всегда добавляем самую дешевую
-            result.append(cheapest)
-            
-            # Добавляем самую быструю только если это РАЗНАЯ позиция
-            # Проверяем по ключевым параметрам
-            is_different = (
-                cheapest.get('provider') != fastest.get('provider') or
-                cheapest.get('warehouse') != fastest.get('warehouse') or
-                cheapest.get('price') != fastest.get('price') or
-                cheapest.get('delivery_days') != fastest.get('delivery_days')
-            )
-            
-            if is_different:
-                result.append(fastest)
+        result = list(grouped.values())
     
     # Применяем фильтр по наличию если нужно
     if availability_filter == 'in_stock_tyumen':
