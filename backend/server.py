@@ -255,6 +255,35 @@ async def search_by_article(request: SearchArticleRequest):
         if len(autotrade_parts) == 0:
             logger.info("Autotrade returned 0 results, trying OEM search...")
             
+            # Функция для генерации вариантов артикула
+            def generate_article_variants(article: str) -> set:
+                """Генерирует варианты артикула для поиска"""
+                variants = {article}
+                
+                # Убираем дефисы
+                no_dash = article.replace('-', '')
+                variants.add(no_dash)
+                
+                # Добавляем ST- префикс если его нет
+                if not article.upper().startswith('ST-') and not article.upper().startswith('ST'):
+                    variants.add(f'ST-{article}')
+                    variants.add(f'ST-{no_dash}')
+                
+                # Пробуем заменить суффиксы (например 1PA1A -> H5103)
+                # Берем базовую часть (первые 5 цифр)
+                import re
+                digits = re.findall(r'\d+', article)
+                if digits:
+                    base_number = digits[0]
+                    if len(base_number) >= 5:
+                        # Пробуем популярные суффиксы для Hyundai/Kia
+                        common_suffixes = ['H5103', '1PA1A', 'AA100', '35503']
+                        for suffix in common_suffixes:
+                            variants.add(f'{base_number}-{suffix}')
+                            variants.add(f'ST-{base_number}-{suffix}')
+                
+                return variants
+            
             # Собираем OEM номера из результатов других поставщиков
             oem_numbers = set()
             
@@ -262,19 +291,23 @@ async def search_by_article(request: SearchArticleRequest):
             for part in berg_parts:
                 article = part.get('article', '').strip()
                 if article and article.upper() != request.article.upper():
-                    oem_numbers.add(article)
+                    # Добавляем оригинал и варианты
+                    variants = generate_article_variants(article)
+                    oem_numbers.update(variants)
             
             # Из Rossko
             for part in rossko_parts:
                 article = part.get('article', '').strip()
                 if article and article.upper() != request.article.upper():
-                    oem_numbers.add(article)
+                    variants = generate_article_variants(article)
+                    oem_numbers.update(variants)
             
             # Из Autostels
             for part in autostels_parts:
                 article = part.get('article', '').strip()
                 if article and article.upper() != request.article.upper():
-                    oem_numbers.add(article)
+                    variants = generate_article_variants(article)
+                    oem_numbers.update(variants)
             
             logger.info(f"Found {len(oem_numbers)} OEM numbers to search in Autotrade")
             
