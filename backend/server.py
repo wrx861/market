@@ -243,16 +243,20 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
             else:
                 return 1
     
-    # Сортировка
+    # Сортировка с учетом приоритета оригинала
     if sort_by == 'price_asc':
+        # Сначала оригинал, потом сортировка по цене
         result.sort(key=lambda x: (get_priority(x), x.get('price', 999999)))
     elif sort_by == 'price_desc':
+        # Сначала оригинал, потом сортировка по цене (убывание)
         result.sort(key=lambda x: (get_priority(x), -x.get('price', 0)))
     elif sort_by == 'delivery_asc':
-        result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999)))
+        # Быстрая доставка: сначала оригинал, потом по скорости доставки
+        result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999), x.get('price', 999999)))
     else:
-        # По умолчанию: приоритет (оригинал > запрошенный > аналоги), потом по доставке
-        result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999)))
+        # По умолчанию: оригинал первым, потом запрошенный, потом аналоги
+        # Внутри каждой группы сортируем по доставке, потом по цене
+        result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999), x.get('price', 999999)))
     
     return result
 
