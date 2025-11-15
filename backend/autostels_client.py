@@ -122,9 +122,10 @@ class AutostelsClient:
         """
         try:
             # Формируем XML параметры для CDATA (согласно документации v3.6)
+            # ResultFilter: 0 - старый формат, 2 - новый формат (используем 2)
             search_params = f"""<root>
    {self._create_session_info()}
-   <Search>
+   <Search ResultFilter="2">
       <ProductID>{product_id}</ProductID>
       <StocksOnly>0</StocksOnly>
       <InStock>{in_stock}</InStock>
