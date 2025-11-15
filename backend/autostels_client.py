@@ -230,9 +230,11 @@ class AutostelsClient:
             logger.error(traceback.format_exc())
             return []
     
-    def search_by_article(self, article: str, in_stock: int = 1, show_cross: int = 1) -> List[Dict]:
+    def search_by_article(self, article: str, in_stock: int = 1, show_cross: int = 2) -> List[Dict]:
         """
         Полный поиск по артикулу (Step1 + Step2)
+        in_stock: 1 - все предложения, 2 - только в наличии
+        show_cross: 1 - без аналогов, 2 - с аналогами
         """
         logger.info(f"Searching Autostels for article: {article}")
         
@@ -243,9 +245,12 @@ class AutostelsClient:
             logger.info("No brands found in step1")
             return []
         
+        logger.info(f"Found {len(brands)} brands in step1, proceeding to step2")
+        
         # Шаг 2: Получаем предложения для каждого бренда
         all_offers = []
-        for brand in brands:
+        for brand in brands[:5]:  # Ограничиваем 5 брендами для оптимизации
+            logger.info(f"Searching step2 for brand: {brand['producer_name']}")
             offers = self.search_step2(brand['product_id'], in_stock, show_cross)
             all_offers.extend(offers)
         
