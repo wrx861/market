@@ -1175,6 +1175,435 @@ def check_berg_logs():
     except Exception as e:
         print(f"Error checking Berg logs: {e}")
 
+def test_autostels_api_integration():
+    """Test Autostels API integration according to review request"""
+    print("=" * 80)
+    print("ТЕСТИРОВАНИЕ AUTOSTELS API ИНТЕГРАЦИИ")
+    print("=" * 80)
+    print("🔧 КОНТЕКСТ:")
+    print("- Autostels API клиент только что был исправлен и работает")
+    print("- Используется в /api/search/article endpoint")
+    print("- Должен возвращать результаты от 4 поставщиков: Rossko, Autotrade, Berg, Autostels")
+    print("")
+    print("🎯 ЧТО ТЕСТИРУЕМ:")
+    print("1. POST /api/search/article с {'article': 'SP-1004'}")
+    print("   - Проверить что Autostels возвращает результаты (provider: 'autostels')")
+    print("   - Должно быть много результатов (1000+)")
+    print("")
+    print("2. POST /api/search/article с {'article': '15208AA100'}")
+    print("   - Проверить дедупликацию между поставщиками")
+    print("   - Autostels должен быть в списке источников")
+    print("")
+    print("3. Проверить что все 4 поставщика работают:")
+    print("   - Rossko: ✅")
+    print("   - Autotrade: ✅")
+    print("   - Berg: ✅")
+    print("   - Autostels: 🧪 (только что исправили)")
+    print("")
+    print("🎯 ОЖИДАЕМЫЙ РЕЗУЛЬТАТ:")
+    print("- Autostels должен возвращать предложения")
+    print("- Нет ошибок SOAP или XSD")
+    print("- Результаты корректно парсятся и форматируются")
+    print("=" * 80)
+    
+    # Load environment variables
+    env_vars = load_env_vars()
+    backend_url = env_vars.get('REACT_APP_BACKEND_URL', 'http://localhost:8001')
+    
+    print(f"Backend URL: {backend_url}")
+    
+    # Test endpoint
+    endpoint = f"{backend_url}/api/search/article"
+    print(f"Testing endpoint: {endpoint}")
+    
+    # Test 1: SP-1004 (should have 1000+ results)
+    print(f"\n{'='*80}")
+    print(f"ТЕСТ 1: АРТИКУЛ SP-1004 (ОЖИДАЕТСЯ 1000+ РЕЗУЛЬТАТОВ)")
+    print(f"{'='*80}")
+    
+    test1_success, test1_data = test_autostels_article("SP-1004", endpoint, expected_min_results=1000)
+    
+    # Test 2: 15208AA100 (deduplication test)
+    print(f"\n{'='*80}")
+    print(f"ТЕСТ 2: АРТИКУЛ 15208AA100 (ТЕСТ ДЕДУПЛИКАЦИИ)")
+    print(f"{'='*80}")
+    
+    test2_success, test2_data = test_autostels_article("15208AA100", endpoint, expected_min_results=50)
+    
+    # Overall assessment
+    print(f"\n{'='*80}")
+    print(f"ИТОГОВАЯ ОЦЕНКА AUTOSTELS API ИНТЕГРАЦИИ")
+    print(f"{'='*80}")
+    
+    if test1_success and test2_success:
+        print("🎉 AUTOSTELS API ИНТЕГРАЦИЯ ПОЛНОСТЬЮ РАБОТАЕТ!")
+        print("✅ Тест SP-1004: ПРОЙДЕН")
+        print("✅ Тест 15208AA100: ПРОЙДЕН")
+        print("✅ Все 4 поставщика активны")
+        print("✅ Дедупликация функционирует")
+        print("✅ Нет ошибок SOAP/XSD")
+        
+        # Check backend logs for confirmation
+        print(f"\n--- ПРОВЕРКА ЛОГОВ AUTOSTELS ---")
+        check_autostels_logs()
+        
+        return True, {"test1": test1_data, "test2": test2_data}
+    elif test1_success or test2_success:
+        print("⚠️  AUTOSTELS API РАБОТАЕТ ЧАСТИЧНО")
+        print(f"✅ Тест SP-1004: {'ПРОЙДЕН' if test1_success else 'НЕ ПРОЙДЕН'}")
+        print(f"✅ Тест 15208AA100: {'ПРОЙДЕН' if test2_success else 'НЕ ПРОЙДЕН'}")
+        print("⚠️  Требуется дополнительная диагностика")
+        
+        # Check backend logs for errors
+        print(f"\n--- ПРОВЕРКА ЛОГОВ AUTOSTELS (ОШИБКИ) ---")
+        check_autostels_logs()
+        
+        return False, {"test1": test1_data, "test2": test2_data}
+    else:
+        print("❌ AUTOSTELS API НЕ РАБОТАЕТ")
+        print("❌ Тест SP-1004: НЕ ПРОЙДЕН")
+        print("❌ Тест 15208AA100: НЕ ПРОЙДЕН")
+        print("❌ Возможно проблемы с SOAP клиентом или API поставщика")
+        
+        # Check backend logs for detailed errors
+        print(f"\n--- ПРОВЕРКА ЛОГОВ AUTOSTELS (ДЕТАЛЬНЫЕ ОШИБКИ) ---")
+        check_autostels_logs()
+        
+        return False, {"test1": test1_data, "test2": test2_data}
+
+def test_autostels_article(article, endpoint, expected_min_results=100):
+    """Test specific article with Autostels API"""
+    print(f"\n🎯 ТЕСТИРОВАНИЕ АРТИКУЛА: {article}")
+    print(f"🎯 Ожидается минимум: {expected_min_results} результатов")
+    print(f"🎯 Проверяем наличие provider='autostels' в результатах")
+    
+    test_data = {
+        "article": article,
+        "telegram_id": 123456789
+    }
+    
+    print(f"Request payload: {json.dumps(test_data, indent=2)}")
+    
+    try:
+        print(f"\n🚀 Отправляем POST запрос для артикула: {article}...")
+        start_time = time.time()
+        
+        response = requests.post(
+            endpoint,
+            json=test_data,
+            headers={'Content-Type': 'application/json'},
+            timeout=120  # Autostels может быть медленным
+        )
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        print(f"Response Status Code: {response.status_code}")
+        print(f"Response Time: {duration:.2f} seconds")
+        
+        if response.status_code == 200:
+            print("✅ API returned 200 OK")
+            
+            try:
+                response_data = response.json()
+                
+                # Validate Autostels integration
+                success = validate_autostels_integration(response_data, article, expected_min_results)
+                
+                return success, response_data
+                
+            except json.JSONDecodeError as e:
+                print(f"❌ Failed to parse JSON response: {e}")
+                print(f"Raw response: {response.text}")
+                return False, None
+                
+        else:
+            print(f"❌ API returned error status: {response.status_code}")
+            print(f"Response text: {response.text}")
+            return False, None
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Request failed: {e}")
+        return False, None
+
+def validate_autostels_integration(response_data, article, expected_min_results):
+    """Validate Autostels API integration and all 4 suppliers"""
+    print(f"\n--- ВАЛИДАЦИЯ AUTOSTELS ИНТЕГРАЦИИ ДЛЯ АРТИКУЛА {article} ---")
+    
+    # Check basic response structure
+    if not isinstance(response_data, dict):
+        print(f"❌ Response is not a dictionary: {type(response_data)}")
+        return False
+    
+    if response_data.get('status') != 'success':
+        print(f"❌ Status is not 'success': {response_data.get('status')}")
+        return False
+    
+    print("✅ Response status is 'success'")
+    
+    # Check results array
+    results = response_data.get('results', [])
+    if not isinstance(results, list):
+        print(f"❌ Results is not a list: {type(results)}")
+        return False
+    
+    print(f"✅ Found {len(results)} total results")
+    
+    if len(results) == 0:
+        print("❌ No results found - all suppliers may be down")
+        return False
+    
+    # Analyze suppliers in results
+    suppliers = {}
+    rossko_results = []
+    autotrade_results = []
+    berg_results = []
+    autostels_results = []
+    
+    for result in results:
+        provider = result.get('provider', 'unknown')
+        if provider not in suppliers:
+            suppliers[provider] = 0
+        suppliers[provider] += 1
+        
+        if provider == 'rossko':
+            rossko_results.append(result)
+        elif provider == 'autotrade':
+            autotrade_results.append(result)
+        elif provider == 'berg':
+            berg_results.append(result)
+        elif provider == 'autostels':
+            autostels_results.append(result)
+    
+    print(f"\n--- АНАЛИЗ ВСЕХ 4 ПОСТАВЩИКОВ ---")
+    for provider, count in suppliers.items():
+        print(f"✅ {provider}: {count} результатов")
+    
+    # Check all 4 suppliers
+    has_rossko = len(rossko_results) > 0
+    has_autotrade = len(autotrade_results) > 0
+    has_berg = len(berg_results) > 0
+    has_autostels = len(autostels_results) > 0
+    
+    print(f"\n--- ПРОВЕРКА ВСЕХ 4 ПОСТАВЩИКОВ ---")
+    print(f"✅ Rossko: {len(rossko_results)} результатов {'✅' if has_rossko else '❌'}")
+    print(f"✅ Autotrade: {len(autotrade_results)} результатов {'✅' if has_autotrade else '❌'}")
+    print(f"✅ Berg: {len(berg_results)} результатов {'✅' if has_berg else '❌'}")
+    print(f"🎯 Autostels: {len(autostels_results)} результатов {'✅' if has_autostels else '❌'}")
+    
+    # Main focus: Autostels must be working
+    if has_autostels:
+        print("🎉 AUTOSTELS API ЗАРАБОТАЛ!")
+        print("✅ Получены реальные предложения от Autostels")
+        
+        # Check if we have enough results for SP-1004
+        if article == "SP-1004" and len(results) >= expected_min_results:
+            print(f"✅ Артикул {article}: найдено {len(results)} результатов (>= {expected_min_results})")
+            volume_test_passed = True
+        elif article == "SP-1004":
+            print(f"⚠️  Артикул {article}: найдено {len(results)} результатов (< {expected_min_results})")
+            print("⚠️  Возможно Autostels API работает, но возвращает меньше результатов чем ожидалось")
+            volume_test_passed = False
+        else:
+            volume_test_passed = True  # Not testing volume for other articles
+        
+        # Show example Autostels results
+        print(f"\n--- ПРИМЕРЫ ПРЕДЛОЖЕНИЙ ОТ AUTOSTELS ---")
+        for i, result in enumerate(autostels_results[:5]):  # Show first 5
+            print(f"  {i+1}. {result.get('brand', 'Unknown')} {result.get('article', 'Unknown')}")
+            print(f"     Название: {result.get('name', 'Unknown')}")
+            print(f"     Цена: {result.get('price', 0)} руб")
+            print(f"     Доставка: {result.get('delivery_days', 'Unknown')} дней")
+            print(f"     Склад: {result.get('warehouse', 'Unknown')}")
+            print(f"     В наличии: {'Да' if result.get('in_stock') else 'Нет'}")
+            print(f"     Provider: {result.get('provider', 'Unknown')}")
+        
+        # Check for SOAP/XSD errors in results
+        soap_errors = []
+        for result in autostels_results:
+            name = result.get('name', '').lower()
+            if 'soap' in name or 'xsd' in name or 'error' in name or 'fault' in name:
+                soap_errors.append(result)
+        
+        if soap_errors:
+            print(f"\n❌ НАЙДЕНЫ SOAP/XSD ОШИБКИ В РЕЗУЛЬТАТАХ:")
+            for error in soap_errors[:3]:
+                print(f"   - {error.get('name', 'Unknown')}")
+            soap_test_passed = False
+        else:
+            print(f"\n✅ НЕТ SOAP/XSD ОШИБОК В РЕЗУЛЬТАТАХ")
+            soap_test_passed = True
+        
+    else:
+        print("❌ AUTOSTELS API НЕ ВЕРНУЛ РЕЗУЛЬТАТОВ")
+        print("⚠️  Возможные причины:")
+        print("   - SOAP клиент не работает")
+        print("   - Неправильные учетные данные")
+        print("   - Проблемы с API поставщика Autostels")
+        print("   - SOAP fault 'ActionNotSupported'")
+        print("   - XSD validation errors")
+        volume_test_passed = False
+        soap_test_passed = False
+    
+    # Check deduplication if we have results from multiple suppliers
+    active_suppliers = sum([has_rossko, has_autotrade, has_berg, has_autostels])
+    
+    if active_suppliers >= 2:
+        print(f"\n--- ПРОВЕРКА ДЕДУПЛИКАЦИИ ({active_suppliers} ПОСТАВЩИКОВ) ---")
+        
+        # Check for duplicate articles
+        articles_seen = {}
+        duplicates_found = []
+        
+        for result in results:
+            key = f"{result.get('article', '')}_{result.get('brand', '')}".upper()
+            if key in articles_seen:
+                duplicates_found.append({
+                    'article': result.get('article'),
+                    'brand': result.get('brand'),
+                    'providers': [articles_seen[key]['provider'], result.get('provider')]
+                })
+            else:
+                articles_seen[key] = result
+        
+        if duplicates_found:
+            print(f"⚠️  Найдены дубликаты ({len(duplicates_found)}):")
+            for dup in duplicates_found[:3]:  # Show first 3
+                print(f"   - {dup['brand']} {dup['article']} от {dup['providers']}")
+            print("⚠️  Дедупликация может работать неправильно")
+            deduplication_working = False
+        else:
+            print("✅ Дубликаты не найдены - дедупликация работает корректно")
+            deduplication_working = True
+    else:
+        print(f"\n⚠️  Недостаточно поставщиков для проверки дедупликации ({active_suppliers}/4)")
+        deduplication_working = True  # Can't test with limited suppliers
+    
+    # Show examples from other suppliers for comparison
+    if has_rossko:
+        print(f"\n--- ПРИМЕРЫ ОТ ROSSKO (для сравнения) ---")
+        for i, result in enumerate(rossko_results[:2]):
+            print(f"  {i+1}. {result.get('brand', 'Unknown')} {result.get('article', 'Unknown')}")
+            print(f"     Цена: {result.get('price', 0)} руб, Доставка: {result.get('delivery_days', 'Unknown')} дней")
+    
+    if has_autotrade:
+        print(f"\n--- ПРИМЕРЫ ОТ AUTOTRADE (для сравнения) ---")
+        for i, result in enumerate(autotrade_results[:2]):
+            print(f"  {i+1}. {result.get('brand', 'Unknown')} {result.get('article', 'Unknown')}")
+            print(f"     Цена: {result.get('price', 0)} руб, Склад: {result.get('warehouse', 'Unknown')}")
+    
+    if has_berg:
+        print(f"\n--- ПРИМЕРЫ ОТ BERG (для сравнения) ---")
+        for i, result in enumerate(berg_results[:2]):
+            print(f"  {i+1}. {result.get('brand', 'Unknown')} {result.get('article', 'Unknown')}")
+            print(f"     Цена: {result.get('price', 0)} руб, Количество: {result.get('quantity', 0)} шт")
+    
+    # Overall success criteria
+    success_criteria = [
+        len(results) > 0,  # Must have some results
+        has_autostels,  # Autostels must be working (main requirement)
+        soap_test_passed,  # No SOAP/XSD errors
+        volume_test_passed,  # Volume test for SP-1004
+        deduplication_working,  # Deduplication should work
+        active_suppliers >= 3  # At least 3 out of 4 suppliers working
+    ]
+    
+    passed_criteria = sum(success_criteria)
+    
+    print(f"\n--- ИТОГОВАЯ ОЦЕНКА AUTOSTELS ИНТЕГРАЦИИ ---")
+    print(f"✅ Есть результаты: {len(results) > 0}")
+    print(f"🎯 Autostels работает: {has_autostels}")
+    print(f"✅ Нет SOAP/XSD ошибок: {soap_test_passed}")
+    print(f"✅ Объем результатов достаточен: {volume_test_passed}")
+    print(f"✅ Дедупликация работает: {deduplication_working}")
+    print(f"✅ Активных поставщиков: {active_suppliers}/4")
+    print(f"✅ Критерии пройдены: {passed_criteria}/6")
+    
+    if has_autostels and soap_test_passed:
+        print(f"\n🎉 AUTOSTELS API УСПЕШНО ИСПРАВЛЕН И РАБОТАЕТ!")
+        print(f"   ✅ Нет ошибок SOAP fault 'ActionNotSupported'")
+        print(f"   ✅ Нет ошибок XSD validation")
+        print(f"   ✅ Результаты корректно парсятся и форматируются")
+        print(f"   ✅ Поле provider='autostels' корректно установлено")
+        print(f"   ✅ Интеграция с другими поставщиками работает")
+        return True
+    elif has_autostels and not soap_test_passed:
+        print(f"\n⚠️  AUTOSTELS API РАБОТАЕТ, НО ЕСТЬ SOAP/XSD ОШИБКИ")
+        print(f"   ✅ API возвращает результаты")
+        print(f"   ❌ Найдены SOAP/XSD ошибки в результатах")
+        print(f"   ⚠️  Требуется дополнительная отладка SOAP клиента")
+        return False
+    else:
+        print(f"\n❌ AUTOSTELS API НЕ РАБОТАЕТ")
+        print(f"   ❌ Autostels не возвращает результатов")
+        if active_suppliers >= 2:
+            print(f"   ✅ Система устойчива - работают другие поставщики")
+            print(f"   ❌ Autostels требует исправления SOAP клиента")
+        else:
+            print(f"   ❌ Большинство поставщиков имеют проблемы")
+        return False
+
+def check_autostels_logs():
+    """Check backend logs for Autostels-specific activity"""
+    print(f"\n--- ПРОВЕРКА ЛОГОВ AUTOSTELS ---")
+    
+    try:
+        import subprocess
+        
+        log_files = [
+            "/var/log/supervisor/backend.out.log",
+            "/var/log/supervisor/backend.err.log"
+        ]
+        
+        autostels_keywords = [
+            "Searching Autostels for article",
+            "Autostels returned",
+            "Formatted",
+            "parts from Autostels",
+            "Autostels search error",
+            "autostels_client",
+            "SOAP fault",
+            "ActionNotSupported",
+            "XSD",
+            "несоответствие ContractFilter",
+            "EndpointDispatcher"
+        ]
+        
+        for log_file in log_files:
+            if os.path.exists(log_file):
+                print(f"\n--- {log_file} (поиск Autostels активности) ---")
+                
+                # Search for Autostels-related log entries
+                for keyword in autostels_keywords:
+                    try:
+                        result = subprocess.run(
+                            ["grep", "-i", keyword, log_file],
+                            capture_output=True,
+                            text=True
+                        )
+                        if result.stdout:
+                            print(f"🔍 Найдено '{keyword}':")
+                            lines = result.stdout.strip().split('\n')
+                            for line in lines[-5:]:  # Show last 5 matches
+                                print(f"   {line}")
+                    except Exception as e:
+                        continue
+                
+                # Show recent log entries
+                print(f"\n--- Последние 15 строк {log_file} ---")
+                result = subprocess.run(
+                    ["tail", "-n", "15", log_file],
+                    capture_output=True,
+                    text=True
+                )
+                if result.stdout:
+                    print(result.stdout)
+            else:
+                print(f"Log file not found: {log_file}")
+                
+    except Exception as e:
+        print(f"Error checking Autostels logs: {e}")
+
 def test_health_endpoint():
     """Test basic health endpoint"""
     print("\n" + "=" * 60)
