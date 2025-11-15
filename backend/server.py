@@ -64,17 +64,22 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
     
     # Убираем префиксы из поискового запроса для поиска оригинала
     search_without_prefix = search_normalized
-    for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'R', 'SR', 'PSG', 'AGS', 'SL']:
-        if search_normalized.startswith(prefix):
+    for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'R', 'SR', 'PSG', 'AGS', 'SL', 'HY', 'HNQ']:
+        if search_normalized.startswith(prefix) and len(search_normalized) > len(prefix):
             search_without_prefix = search_normalized[len(prefix):]
             break
     
     for part in parts:
         part_article = part.get('article', '')
         part_normalized = normalize_article(part_article)
+        part_name = part.get('name', '').lower()
         
         # Пропускаем позиции с нулевой ценой или количеством (обычно Berg "Нет в наличии")
         if part.get('price', 0) == 0 or part.get('quantity', 0) == 0:
+            continue
+        
+        # Фильтруем комплектующие по названию (сальники, кольца, резиновые, хомуты и т.д.)
+        if any(keyword in part_name for keyword in ['сальник', 'кольцо', 'резинов', 'хомут', 'тефлон', 'ремкомплект', 'заглушка']):
             continue
         
         # Проверяем точное совпадение (с учетом префиксов)
@@ -83,8 +88,11 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
         # Проверяем совпадение без префикса (чтобы найти оригинал)
         elif search_without_prefix == part_normalized:
             filtered.append(part)
-        # Проверяем обратное - оригинал содержится в запросе с префиксом
-        elif part_normalized in search_normalized:
+        # Проверяем обратное - базовый номер в запросе с префиксом
+        elif search_without_prefix and search_without_prefix in part_normalized:
+            filtered.append(part)
+        # Проверяем если в запросе префикс, а деталь без префикса
+        elif part_normalized and part_normalized in search_normalized:
             filtered.append(part)
     
     return filtered
