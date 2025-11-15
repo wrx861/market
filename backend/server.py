@@ -180,14 +180,26 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
     
     # Применяем фильтр по наличию если нужно
     if availability_filter == 'in_stock_tyumen':
-        # "В наличии" = флаг in_stock=True (определяется поставщиками)
-        # Для Autotrade: только Екатеринбург и Тюмень
-        # Для остальных: delivery ≤ 1 день
+        # "В наличии" = ТОЛЬКО склады ТЮМЕНИ
+        # Фильтруем по названию склада: должно содержать "ТЮМЕНЬ" или "TYM-"
         result = [p for p in result if p.get('in_stock', False)]
         
-        # ВАЖНО: После фильтрации применяем дедупликацию заново
-        # Потому что Autostels может вернуть много складов для одного артикула
-        # Оставляем максимум 2 позиции: дешевая + быстрая
+        # Дополнительный фильтр: ТОЛЬКО Тюмень
+        tyumen_results = []
+        for p in result:
+            warehouse = p.get('warehouse', '').upper()
+            # Проверяем различные варианты написания Тюмени:
+            # - "Тюмень" (от Autotrade)
+            # - "TYM-STC-*" (от Autostels)
+            # - "ТЮМЕНЬ" (от других поставщиков)
+            is_tyumen = any(marker in warehouse for marker in ['ТЮМЕНЬ', 'ТЮМЕН', 'TYUMEN', 'TYM-', 'TYM '])
+            if is_tyumen:
+                tyumen_results.append(p)
+        
+        result = tyumen_results
+        
+        # ВАЖНО: После фильтрации применяем дедупликацию
+        # Оставляем максимум 2 позиции на артикул: дешевая + быстрая
         grouped_after_filter = {}
         for part in result:
             article_normalized = normalize_article(part['article'])
