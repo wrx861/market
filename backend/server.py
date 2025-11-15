@@ -65,9 +65,15 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
     
     for part in parts:
         part_name = part.get('name', '').strip()
+        provider = part.get('provider', '')
         
-        # Пропускаем позиции с нулевой ценой или количеством
-        if part.get('price', 0) <= 0 or part.get('quantity', 0) <= 0:
+        # Пропускаем позиции с нулевой ценой
+        if part.get('price', 0) <= 0:
+            continue
+        
+        # Для Rossko не проверяем quantity (они всегда возвращают 0, но товар есть под заказ)
+        # Для остальных проверяем quantity
+        if provider != 'rossko' and part.get('quantity', 0) <= 0:
             continue
         
         # Пропускаем позиции БЕЗ названия (только артикул)
