@@ -221,32 +221,28 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
         part_article = part.get('article', '')
         part_clean = part_article.upper().replace('-', '').replace(' ', '').replace('/', '')
         
-        # Проверяем наличие префиксов (ST-, EX-, и т.д.)
-        has_prefix = any(part_clean.startswith(prefix) for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'PSG', 'AGS', 'SL'])
+        # Проверяем наличие префиксов (ST-, EX-, HAZ-, и т.д.)
+        common_prefixes = ['ST', 'EX', 'HAZ', 'HNQ', 'PSG', 'AGS', 'SL', 'HY', 'R', 'SR']
+        has_prefix = any(part_clean.startswith(prefix) for prefix in common_prefixes)
         
         # Проверяем был ли запрошен артикул с префиксом
-        search_has_prefix = any(search_normalized.startswith(prefix) for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'PSG', 'AGS', 'SL'])
+        search_has_prefix = any(search_normalized.startswith(prefix) for prefix in common_prefixes)
         
-        # 1. СЛУЧАЙ: Запросили артикул с префиксом (например ST-5771025510)
-        if search_has_prefix:
-            # Сначала оригинал БЕЗ префикса
-            if part.get('is_original', False) and not has_prefix:
-                return 0
-            # Потом запрошенный артикул С префиксом
-            elif part.get('is_requested', False) and has_prefix:
-                return 1
-            # Потом остальные аналоги
+        # ВСЕГДА: Оригинал БЕЗ префикса имеет наивысший приоритет
+        # (например 57710-25510 идет перед ST-5771025510)
+        if not has_prefix:
+            # Оригинальный OEM номер без префикса
+            if part.get('is_requested', False):
+                return 0  # Запрошенный оригинал (например, искали "57710-25510")
             else:
-                return 2
+                return 1  # Другой оригинал без префикса
         
-        # 2. СЛУЧАЙ: Запросили чистый OEM номер (например 57710-25510)
+        # Артикулы С префиксом (ST-, EX-, и т.д.)
         else:
-            # Сначала оригиналы
-            if part.get('is_original', False):
-                return 0
-            # Потом аналоги
+            if part.get('is_requested', False):
+                return 2  # Запрошенный артикул с префиксом (например, искали "ST-5771025510")
             else:
-                return 1
+                return 3  # Другие артикулы с префиксом (аналоги)
     
     # Сортировка с учетом приоритета оригинала
     if sort_by == 'price_asc':
