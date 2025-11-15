@@ -11,14 +11,11 @@ print("="*70, flush=True)
 print("TEST: Autostels Step2 with different formats", flush=True)
 print("="*70, flush=True)
 
-# Test without ResultFilter, without PeriodMin/PeriodMax
+# Test with MINIMAL fields only (as in docs example)
 xml2_v1 = f'''<root>
    <SessionInfo ParentID="39151" UserLogin="{login_b64}" UserPass="{password_b64}" />
    <Search>
       <ProductID>25083996</ProductID>
-      <StocksOnly>0</StocksOnly>
-      <InStock>1</InStock>
-      <ShowCross>2</ShowCross>
    </Search>
 </root>'''
 
