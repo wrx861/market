@@ -54,6 +54,7 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
     - Точное совпадение артикула
     - Аналоги (is_cross=true) с точным совпадением артикула
     - НЕ показывает комплектующие (сальники, кольца и т.д.)
+    - Убирает позиции с нулевой ценой или количеством
     """
     if not parts:
         return []
@@ -64,6 +65,10 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
     for part in parts:
         part_article = part.get('article', '')
         part_normalized = normalize_article(part_article)
+        
+        # Пропускаем позиции с нулевой ценой или количеством (обычно Berg "Нет в наличии")
+        if part.get('price', 0) == 0 or part.get('quantity', 0) == 0:
+            continue
         
         # Проверяем точное совпадение артикула
         if search_normalized == part_normalized:
