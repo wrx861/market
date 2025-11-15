@@ -11,13 +11,19 @@ print("="*70, flush=True)
 print("TEST: Autostels Step2 with different formats", flush=True)
 print("="*70, flush=True)
 
-# Test with different formats
+# Test with MINIMAL REQUIRED fields according to docs
 product_id = "25083996"
 
-# Format 1: Try with compact XML (no extra spaces/newlines)
-xml2_v1 = f'''<root><SessionInfo ParentID="39151" UserLogin="{login_b64}" UserPass="{password_b64}"/><Search><ProductID>{product_id}</ProductID></Search></root>'''
+# Минимальный рабочий пример: ProductID + StocksOnly (оба обязательны)
+xml2_v1 = f'''<root>
+   <SessionInfo ParentID="39151" UserLogin="{login_b64}" UserPass="{password_b64}" />
+   <Search>
+      <ProductID>{product_id}</ProductID>
+      <StocksOnly>0</StocksOnly>
+   </Search>
+</root>'''
 
-print(f"\nUsing compact XML format\n", flush=True)
+print(f"\nTesting with ProductID={product_id} and StocksOnly=0\n", flush=True)
 
 soap2 = f'''<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
