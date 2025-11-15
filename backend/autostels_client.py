@@ -174,23 +174,44 @@ class AutostelsClient:
         try:
             root = ET.fromstring(xml_text)
             
+            # Извлекаем результат из SOAP envelope
             ns = {'s': 'http://schemas.xmlsoap.org/soap/envelope/',
                   't': 'http://tempuri.org/'}
             
+            # Находим SearchOfferStep2Result
+            result_elem = root.find('.//t:SearchOfferStep2Result', ns)
+            
+            if result_elem is None or not result_elem.text:
+                logger.warning("No SearchOfferStep2Result found in response")
+                return []
+            
+            # Парсим внутренний XML из результата
+            result_xml = result_elem.text
+            result_root = ET.fromstring(result_xml)
+            
             offers = []
-            for offer_elem in root.findall('.//t:Offer', ns):
+            # Ищем все элементы row внутри rows
+            for row in result_root.findall('.//row'):
                 try:
+                    # Извлекаем данные из row
+                    price = row.findtext('Price', '0')
+                    quantity = row.findtext('Quantity', '0')
+                    period_min = row.findtext('PeriodMin', '0')
+                    period_max = row.findtext('PeriodMax', '0')
+                    is_cross = row.findtext('IsCross', '0')
+                    is_availability = row.findtext('IsAvailability', '0')
+                    
                     offer = {
-                        'article': offer_elem.findtext('t:ProductCode', '', ns),
-                        'brand': offer_elem.findtext('t:ProducerName', '', ns),
-                        'name': offer_elem.findtext('t:ProductName', '', ns),
-                        'price': float(offer_elem.findtext('t:Price', '0', ns)),
-                        'quantity': int(offer_elem.findtext('t:Quantity', '0', ns)),
-                        'delivery_days': int(offer_elem.findtext('t:PeriodMin', '0', ns)),
-                        'delivery_days_max': int(offer_elem.findtext('t:PeriodMax', '0', ns)),
-                        'warehouse': offer_elem.findtext('t:ProviderName', 'Autostels', ns),
-                        'is_cross': int(offer_elem.findtext('t:IsCross', '0', ns)) == 1,
-                        'in_stock': int(offer_elem.findtext('t:IsAvailability', '0', ns)) == 1,
+                        'article': row.findtext('ProductCode', ''),
+                        'brand': row.findtext('ProducerName', ''),
+                        'name': row.findtext('ProductName', ''),
+                        'price': float(price) if price else 0.0,
+                        'quantity': int(quantity) if quantity else 0,
+                        'delivery_days': int(period_min) if period_min else 0,
+                        'delivery_days_max': int(period_max) if period_max else 0,
+                        'warehouse': row.findtext('ProviderName', 'Autostels'),
+                        'is_cross': int(is_cross) == 1 if is_cross else False,
+                        'in_stock': int(is_availability) == 1 if is_availability else False,
                         'provider': 'autostels'
                     }
                     
@@ -205,6 +226,8 @@ class AutostelsClient:
             
         except Exception as e:
             logger.error(f"Error parsing step2 response: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     def search_by_article(self, article: str, in_stock: int = 1, show_cross: int = 1) -> List[Dict]:
