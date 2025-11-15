@@ -251,6 +251,62 @@ async def search_by_article(request: SearchArticleRequest):
             logger.error(f"Autostels search failed: {str(autostels_parts)}")
             autostels_parts = []
         
+        # Если Autotrade ничего не нашел, пробуем поиск по OEM номерам из других поставщиков
+        if len(autotrade_parts) == 0:
+            logger.info("Autotrade returned 0 results, trying OEM search...")
+            
+            # Собираем OEM номера из результатов других поставщиков
+            oem_numbers = set()
+            
+            # Из Berg
+            for part in berg_parts:
+                article = part.get('article', '').strip()
+                if article and article.upper() != request.article.upper():
+                    oem_numbers.add(article)
+            
+            # Из Rossko
+            for part in rossko_parts:
+                article = part.get('article', '').strip()
+                if article and article.upper() != request.article.upper():
+                    oem_numbers.add(article)
+            
+            # Из Autostels
+            for part in autostels_parts:
+                article = part.get('article', '').strip()
+                if article and article.upper() != request.article.upper():
+                    oem_numbers.add(article)
+            
+            logger.info(f"Found {len(oem_numbers)} OEM numbers to search in Autotrade")
+            
+            # Ищем в Autotrade по каждому OEM номеру (максимум 5 чтобы не перегружать)
+            if oem_numbers:
+                oem_search_tasks = []
+                for oem in list(oem_numbers)[:5]:  # Берем первые 5 OEM
+                    async def search_by_oem(oem_number):
+                        try:
+                            loop = asyncio.get_event_loop()
+                            return await loop.run_in_executor(
+                                None,
+                                lambda: autotrade_client.search_by_article(oem_number, markup_percent)
+                            )
+                        except Exception as e:
+                            logger.error(f"OEM search failed for {oem_number}: {str(e)}")
+                            return []
+                    
+                    oem_search_tasks.append(search_by_oem(oem))
+                
+                # Выполняем поиски параллельно
+                oem_results = await asyncio.gather(*oem_search_tasks, return_exceptions=True)
+                
+                # Объединяем результаты
+                for result in oem_results:
+                    if not isinstance(result, Exception) and result:
+                        logger.info(f"Found {len(result)} results from OEM search")
+                        autotrade_parts.extend(result)
+                
+                if len(autotrade_parts) > 0:
+                    logger.info(f"✅ Autotrade OEM search successful: found {len(autotrade_parts)} parts")
+        
         # Применяем наценку к Autotrade, Berg и Autostels если нужно
         if markup_percent > 0:
             for part in autotrade_parts:
