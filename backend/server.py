@@ -112,8 +112,20 @@ autostels_client = AutostelsClient()
 autotrade_client = AutotradeClient()
 berg_client = BergClient()
 oem_parser = AutotradeOEMParser()
-ai_client = OpenAIClient()
-partsapi_client = PartsApiClient()
+
+# Optional clients - only if API keys are provided
+try:
+    ai_client = OpenAIClient()
+except ValueError:
+    ai_client = None
+    logger.warning("OpenAI client not initialized - OPENAI_API_KEY not provided")
+
+try:
+    partsapi_client = PartsApiClient()
+except (ValueError, Exception) as e:
+    partsapi_client = None
+    logger.warning(f"PartsAPI client not initialized: {str(e)}")
+
 telegram_notifier = TelegramNotifier()
 
 # Create the main app
