@@ -206,8 +206,8 @@ class Reminder(BaseModel):
 class SearchArticleRequest(BaseModel):
     article: str
     telegram_id: int
-    availability_filter: Optional[str] = None  # 'in_stock', 'on_order', None
-    sort_by: Optional[str] = None  # 'price_asc', 'price_desc', None
+    availability_filter: Optional[str] = None  # 'in_stock_tyumen', 'on_order', None
+    sort_by: Optional[str] = None  # 'price_asc', 'price_desc', 'delivery_asc', None
 
 
 class SearchVINRequest(BaseModel):
