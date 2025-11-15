@@ -161,21 +161,31 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
     
     # Применяем фильтр по наличию если нужно
     if availability_filter == 'in_stock_tyumen':
-        # "В наличии" = ТОЛЬКО склады ТЮМЕНИ
-        # Фильтруем по названию склада: должно содержать "ТЮМЕНЬ" или "TYM-"
-        result = [p for p in result if p.get('in_stock', False)]
-        
-        # Дополнительный фильтр: ТОЛЬКО Тюмень
+        # "В наличии" = ТОЛЬКО реальная Тюмень с быстрой доставкой (0-1 день)
         tyumen_results = []
+        
         for p in result:
             warehouse = p.get('warehouse', '').upper()
-            # Проверяем различные варианты написания Тюмени:
-            # - "Тюмень" (от Autotrade)
-            # - "TYM-STC-*" (от Autostels)
-            # - "ТЮМЕНЬ" (от других поставщиков)
-            is_tyumen = any(marker in warehouse for marker in ['ТЮМЕНЬ', 'ТЮМЕН', 'TYUMEN', 'TYM-', 'TYM '])
-            if is_tyumen:
-                tyumen_results.append(p)
+            provider = p.get('provider', '')
+            delivery_days = p.get('delivery_days', 999)
+            
+            # Проверяем склад Тюмени по названию и быстрой доставке:
+            # Autotrade: "Тюмень (Дружбы)" + delivery <= 1 + in_stock=True
+            # Autostels, Berg, Rossko: содержит "ТЮМЕНЬ" в названии + delivery <= 1
+            
+            # Для Autotrade используем флаг in_stock (он правильно настроен)
+            if provider == 'autotrade':
+                if p.get('in_stock', False):
+                    tyumen_results.append(p)
+            # Для остальных проверяем название склада + быстрая доставка
+            else:
+                # Реальная Тюмень должна содержать слово "ТЮМЕНЬ" или "TYUMEN"
+                # НЕ просто код "TYM-STC-" (это могут быть любые склады)
+                has_tyumen_in_name = any(marker in warehouse for marker in ['ТЮМЕНЬ', 'ТЮМЕН', 'TYUMEN'])
+                
+                # И доставка должна быть быстрой (0-1 день)
+                if has_tyumen_in_name and delivery_days <= 1:
+                    tyumen_results.append(p)
         
         result = tyumen_results
         
