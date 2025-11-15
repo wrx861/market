@@ -49,8 +49,9 @@ try:
     res2 = root2.find('.//{http://tempuri.org/}SearchOfferStep2Result')
     
     print(f"Result element found: {res2 is not None}", flush=True)
+    print(f"Result has text: {res2.text is not None if res2 else False}", flush=True)
     
-    if res2 and res2.text:
+    if res2 is not None and res2.text:
         result_xml = res2.text
         print(f"Response length: {len(result_xml)} characters\n")
         print("First 1000 characters of response:")
