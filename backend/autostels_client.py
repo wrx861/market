@@ -22,9 +22,16 @@ class AutostelsClient:
         # SessionGUID получается из Step1 и используется в Step2
         self.session_guid = None
     
-    def _create_session_info(self) -> str:
-        """Создает XML для SessionInfo (используем атрибуты как в документации)"""
-        return f'<SessionInfo ParentID="{self.parent_id}" UserLogin="{self.login_b64}" UserPass="{self.password_b64}" />'
+    def _create_session_info(self, use_session_guid: bool = False) -> str:
+        """
+        Создает XML для SessionInfo
+        use_session_guid=False: для Step1 (используем UserLogin и UserPass)
+        use_session_guid=True: для Step2 (используем SessionGUID)
+        """
+        if use_session_guid and self.session_guid:
+            return f'<SessionInfo ParentID="{self.parent_id}" SessionGUID="{self.session_guid}" />'
+        else:
+            return f'<SessionInfo ParentID="{self.parent_id}" UserLogin="{self.login_b64}" UserPass="{self.password_b64}" />'
     
     def search_step1(self, article: str) -> List[Dict]:
         """
