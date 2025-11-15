@@ -501,8 +501,7 @@ test_plan:
     - "Telegram Bot - запуск и работа"
     - "Autotrade search logic - analogs and filtering"
     - "Berg API - интеграция нового поставщика"
-  stuck_tasks: 
-    - "Autostels API - интеграция нового поставщика"
+  stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
