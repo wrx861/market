@@ -602,8 +602,12 @@ async def ai_search(request: AISearchRequest):
             parts = rossko_client.search_by_article(search_query)
             logger.info(f"Rossko direct search found {len(parts)} parts")
         
-        # Получаем количество групп каталога
-        catalog_groups = partsapi_client.get_catalog_groups(request.vin)
+        # Получаем количество групп каталога (если доступен)
+        try:
+            catalog_groups = partsapi_client.get_catalog_groups(request.vin) if partsapi_client else []
+        except Exception as e:
+            logger.warning(f"Failed to get catalog groups: {str(e)}")
+            catalog_groups = []
         
         # Сохраняем историю поиска
         user = await db.users.find_one({"telegram_id": request.telegram_id}, {"_id": 0})
