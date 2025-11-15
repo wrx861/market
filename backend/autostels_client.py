@@ -11,16 +11,10 @@ class AutostelsClient:
         self.base_url = "https://services.allautoparts.ru/WebService2"
         self.search_url = f"{self.base_url}/SearchService.svc"
         
-        # Учетные данные - преобразуем в base64 как требует API
-        import base64
+        # Учетные данные (уже в base64 формате как требует API)
         self.parent_id = "39151"
-        login = "car.workshop72@mail.ru"
-        password = "Qq23321q"
-        self.login_b64 = base64.b64encode(login.encode('utf-8')).decode('utf-8')
-        self.password_b64 = base64.b64encode(password.encode('utf-8')).decode('utf-8')
-        
-        # SessionGUID получается из Step1 и используется в Step2
-        self.session_guid = None
+        self.login_b64 = "Y2FyLndvcmtzaG9wNzJAbWFpbC5ydQ=="
+        self.password_b64 = "UXEyMzMyMXE="
     
     def _create_session_info(self, use_session_guid: bool = False) -> str:
         """
