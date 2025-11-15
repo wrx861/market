@@ -80,6 +80,18 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
         if not part_name or len(part_name) < 3:
             continue
         
+        # Пропускаем позиции с кракозябрами (неправильная кодировка)
+        # Если в названии больше 30% русских "Р" или "С" подряд - это кракозябры
+        if len(part_name) > 5:
+            char_counts = {'Р': 0, 'С': 0}
+            for char in part_name:
+                if char in char_counts:
+                    char_counts[char] += 1
+            # Если больше 40% символов - это Р или С, скорее всего кракозябры
+            total_rs = char_counts['Р'] + char_counts['С']
+            if total_rs / len(part_name) > 0.4:
+                continue
+        
         # Фильтруем комплектующие, инструменты и наборы по ключевым словам в названии
         part_name_lower = part_name.lower()
         is_unwanted = any(keyword in part_name_lower for keyword in [
