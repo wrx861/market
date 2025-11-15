@@ -456,9 +456,14 @@ async def search_by_article(request: SearchArticleRequest):
             for part in autostels_parts:
                 part['price'] = round(part['price'] * (1 + markup_percent / 100), 2)
         
-        # Объединяем результаты и дедуплицируем
+        # Объединяем результаты
         all_parts = rossko_parts + autotrade_parts + berg_parts + autostels_parts
-        parts = deduplicate_and_prioritize(all_parts, availability_filter, sort_by)
+        
+        # Фильтруем только релевантные результаты (точное совпадение артикула, без комплектующих)
+        relevant_parts = filter_relevant_results(all_parts, request.article)
+        
+        # Дедуплицируем и приоритизируем
+        parts = deduplicate_and_prioritize(relevant_parts, request.article, availability_filter, sort_by)
         
         # Сохраняем историю поиска
         user = await db.users.find_one({"telegram_id": request.telegram_id}, {"_id": 0})
