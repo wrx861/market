@@ -155,26 +155,39 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
     
     # Добавляем флаги для frontend
     search_normalized = normalize_article(search_article) if search_article else ""
+    search_original = search_article.upper().replace('-', '').replace(' ', '') if search_article else ""
+    
     for part in result:
-        part_normalized = normalize_article(part.get('article', ''))
+        part_article = part.get('article', '')
+        part_normalized = normalize_article(part_article)
+        part_clean = part_article.upper().replace('-', '').replace(' ', '')
         
         # Помечаем оригинальный артикул (не аналог)
         part['is_original'] = not part.get('is_cross', False)
         
-        # Помечаем запрошенный артикул
-        part['is_requested'] = (part_normalized == search_normalized)
+        # Помечаем запрошенный артикул (точное совпадение с учетом префиксов ST-, EX- и т.д.)
+        part['is_requested'] = (part_normalized == search_normalized) or (part_clean == search_original)
     
     # Приоритизация результатов
     def get_priority(part):
-        # 1. Оригинал (не аналог) - высший приоритет
-        if part.get('is_original', False):
+        part_article = part.get('article', '')
+        part_clean = part_article.upper().replace('-', '').replace(' ', '').replace('/', '')
+        
+        # Проверяем наличие префиксов (ST-, EX-, и т.д.)
+        has_prefix = any(part_clean.startswith(prefix) for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'R', 'SR', 'PSG'])
+        
+        # 1. Оригинал БЕЗ префикса (чистый OEM номер) - высший приоритет
+        if part.get('is_original', False) and not has_prefix:
             return 0
-        # 2. Запрошенный артикул - второй приоритет  
-        elif part.get('is_requested', False):
+        # 2. Запрошенный артикул С префиксом (например ST-5771025510) - второй приоритет
+        elif part.get('is_requested', False) and has_prefix:
             return 1
-        # 3. Остальные аналоги
-        else:
+        # 3. Оригинал С префиксом
+        elif part.get('is_original', False) and has_prefix:
             return 2
+        # 4. Аналоги
+        else:
+            return 3
     
     # Сортировка
     if sort_by == 'price_asc':
