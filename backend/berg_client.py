@@ -62,7 +62,7 @@ class BergClient:
                 for idx, wh_type in enumerate(warehouse_types):
                     params[f"warehouse_types[{idx}]"] = wh_type
             
-            # Отправляем запрос
+            # Отправляем первый запрос
             url = f"{self.base_url}/ordering/get_stock.json"
             response = requests.get(
                 url,
@@ -78,30 +78,47 @@ class BergClient:
                 logger.error(f"Berg API error: {result.get('error')}")
                 return []
             
-            # Парсим результаты
-            resources = result.get('resources', [])
-            logger.info(f"Berg returned {len(resources)} resources")
+            # Проверяем Status 300 (WARN_ARTICLE_IS_AMBIGUOUS) - нужно указать бренд
+            warnings = result.get('warnings', [])
+            is_ambiguous = any(w.get('code') == 'WARN_ARTICLE_IS_AMBIGUOUS' for w in warnings)
             
-            # Преобразуем в единый формат
-            parts = []
-            for resource in resources:
-                # Получаем предложения (offers)
-                offers = resource.get('offers', [])
+            all_parts = []
+            
+            if is_ambiguous and not brand_name:
+                # Артикул неоднозначный - делаем запросы для каждого бренда
+                resources = result.get('resources', [])
+                logger.info(f"Article is ambiguous, found {len(resources)} brands")
                 
-                if offers:
-                    # Создаем запись для каждого offer
-                    for offer in offers:
-                        part = self._format_part(resource, offer)
+                for resource in resources:
+                    brand = resource.get('brand', {})
+                    brand_name_from_resource = brand.get('name')
+                    
+                    if brand_name_from_resource:
+                        # Запрашиваем с конкретным брендом
+                        logger.info(f"Requesting Berg for brand: {brand_name_from_resource}")
+                        brand_parts = self._request_with_brand(article, brand_name_from_resource, analogs, warehouse_types)
+                        all_parts.extend(brand_parts)
+            else:
+                # Обычный ответ - парсим сразу
+                resources = result.get('resources', [])
+                logger.info(f"Berg returned {len(resources)} resources")
+                
+                for resource in resources:
+                    offers = resource.get('offers', [])
+                    
+                    if offers:
+                        for offer in offers:
+                            part = self._format_part(resource, offer)
+                            if part:
+                                all_parts.append(part)
+                    else:
+                        # Создаем базовую запись без offer (цена = 0)
+                        part = self._format_part(resource, None)
                         if part:
-                            parts.append(part)
-                else:
-                    # Создаем базовую запись без offer
-                    part = self._format_part(resource, None)
-                    if part:
-                        parts.append(part)
+                            all_parts.append(part)
             
-            logger.info(f"Formatted {len(parts)} parts from Berg")
-            return parts
+            logger.info(f"Formatted {len(all_parts)} parts from Berg")
+            return all_parts
             
         except requests.exceptions.Timeout:
             logger.error(f"Berg API timeout for article: {article}")
@@ -111,6 +128,42 @@ class BergClient:
             return []
         except Exception as e:
             logger.error(f"Unexpected error in Berg search: {e}", exc_info=True)
+            return []
+    
+    def _request_with_brand(self, article: str, brand_name: str, analogs: bool, warehouse_types: Optional[List[int]] = None) -> List[Dict]:
+        """Запрос к Berg API с указанием конкретного бренда"""
+        try:
+            params = {
+                "key": self.api_key,
+                "items[0][resource_article]": article,
+                "items[0][brand_name]": brand_name,
+                "analogs": 1 if analogs else 0
+            }
+            
+            if warehouse_types:
+                for idx, wh_type in enumerate(warehouse_types):
+                    params[f"warehouse_types[{idx}]"] = wh_type
+            
+            url = f"{self.base_url}/ordering/get_stock.json"
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            result = response.json()
+            
+            parts = []
+            resources = result.get('resources', [])
+            
+            for resource in resources:
+                offers = resource.get('offers', [])
+                if offers:
+                    for offer in offers:
+                        part = self._format_part(resource, offer)
+                        if part:
+                            parts.append(part)
+            
+            return parts
+            
+        except Exception as e:
+            logger.error(f"Error in _request_with_brand for {brand_name}: {e}")
             return []
     
     def _format_part(self, resource: Dict, offer: Optional[Dict]) -> Optional[Dict]:
