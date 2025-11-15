@@ -244,19 +244,19 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
             else:
                 return 3  # Другие артикулы с префиксом (аналоги)
     
-    # Сортировка с учетом приоритета оригинала
+    # Сортировка результатов
     if sort_by == 'price_asc':
-        # Сначала оригинал, потом сортировка по цене
-        result.sort(key=lambda x: (get_priority(x), x.get('price', 999999)))
+        # Сортировка по цене (возрастание)
+        result.sort(key=lambda x: (x.get('price', 999999), x.get('delivery_days', 999)))
     elif sort_by == 'price_desc':
-        # Сначала оригинал, потом сортировка по цене (убывание)
-        result.sort(key=lambda x: (get_priority(x), -x.get('price', 0)))
+        # Сортировка по цене (убывание)
+        result.sort(key=lambda x: (-x.get('price', 0), x.get('delivery_days', 999)))
     elif sort_by == 'delivery_asc':
-        # Быстрая доставка: сначала оригинал, потом по скорости доставки
-        result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999), x.get('price', 999999)))
+        # Быстрая доставка: СТРОГО по скорости доставки, потом по цене
+        # Оригинал НЕ имеет приоритета, только помечается звездочкой
+        result.sort(key=lambda x: (x.get('delivery_days', 999), x.get('price', 999999)))
     else:
-        # По умолчанию: оригинал первым, потом запрошенный, потом аналоги
-        # Внутри каждой группы сортируем по доставке, потом по цене
+        # По умолчанию: оригинал первым (приоритет), потом по доставке и цене
         result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999), x.get('price', 999999)))
     
     return result
