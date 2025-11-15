@@ -287,27 +287,44 @@ async def search_by_article(request: SearchArticleRequest):
             # Собираем OEM номера из результатов других поставщиков
             oem_numbers = set()
             
-            # Из Berg
+            # Из Berg (берем до 20 уникальных артикулов)
+            berg_articles = set()
             for part in berg_parts:
                 article = part.get('article', '').strip()
                 if article and article.upper() != request.article.upper():
-                    # Добавляем оригинал и варианты
-                    variants = generate_article_variants(article)
-                    oem_numbers.update(variants)
+                    berg_articles.add(article)
+                    if len(berg_articles) >= 20:
+                        break
             
-            # Из Rossko
+            for article in berg_articles:
+                variants = generate_article_variants(article)
+                oem_numbers.update(variants)
+            
+            # Из Rossko (берем до 10 уникальных артикулов)
+            rossko_articles = set()
             for part in rossko_parts:
                 article = part.get('article', '').strip()
                 if article and article.upper() != request.article.upper():
-                    variants = generate_article_variants(article)
-                    oem_numbers.update(variants)
+                    rossko_articles.add(article)
+                    if len(rossko_articles) >= 10:
+                        break
             
-            # Из Autostels
+            for article in rossko_articles:
+                variants = generate_article_variants(article)
+                oem_numbers.update(variants)
+            
+            # Из Autostels (берем до 10 уникальных артикулов)
+            autostels_articles = set()
             for part in autostels_parts:
                 article = part.get('article', '').strip()
                 if article and article.upper() != request.article.upper():
-                    variants = generate_article_variants(article)
-                    oem_numbers.update(variants)
+                    autostels_articles.add(article)
+                    if len(autostels_articles) >= 10:
+                        break
+            
+            for article in autostels_articles:
+                variants = generate_article_variants(article)
+                oem_numbers.update(variants)
             
             logger.info(f"Found {len(oem_numbers)} OEM numbers to search in Autotrade")
             
