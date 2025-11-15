@@ -16,39 +16,31 @@ class AutostelsClient:
         self.login_b64 = "Y2FyLndvcmtzaG9wNzJAbWFpbC5ydQ=="
         self.password_b64 = "UXEyMzMyMXE="
     
-    def _create_session_info(self, use_session_guid: bool = False) -> str:
-        """
-        Создает XML для SessionInfo
-        use_session_guid=False: для Step1 (используем UserLogin и UserPass)
-        use_session_guid=True: для Step2 (используем SessionGUID)
-        """
-        if use_session_guid and self.session_guid:
-            return f'<SessionInfo ParentID="{self.parent_id}" SessionGUID="{self.session_guid}" />'
-        else:
-            return f'<SessionInfo ParentID="{self.parent_id}" UserLogin="{self.login_b64}" UserPass="{self.password_b64}" />'
+    def _create_session_info(self) -> str:
+        """Создает XML для SessionInfo (используем атрибуты как в документации)"""
+        return f'<SessionInfo ParentID="{self.parent_id}" UserLogin="{self.login_b64}" UserPass="{self.password_b64}" />'
     
     def search_step1(self, article: str) -> List[Dict]:
         """
         Шаг 1: Поиск брендов по артикулу
         """
         try:
-            # Формируем XML параметры для CDATA (согласно документации v3.6)
-            search_params = f"""<root>
-   {self._create_session_info()}
-   <Search>
-      <Key>{article}</Key>
-   </Search>
+            # XML параметры (внутренний XML)
+            xml_params = f"""<root>
+  {self._create_session_info()}
+  <Search>
+    <Key>{article}</Key>
+  </Search>
 </root>"""
             
-            # Формируем SOAP запрос с CDATA (как в документации)
-            soap_body = f"""<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <tem:SearchOfferStep1>
-         <tem:SearchParametersXml><![CDATA[{search_params}]]></tem:SearchParametersXml>
-      </tem:SearchOfferStep1>
-   </soapenv:Body>
+            # Формируем SOAP запрос (XML передается через CDATA)
+            soap_body = f"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:SearchOfferStep1>
+      <tem:SearchParametersXml><![CDATA[{xml_params}]]></tem:SearchParametersXml>
+    </tem:SearchOfferStep1>
+  </soapenv:Body>
 </soapenv:Envelope>"""
             
             headers = {
@@ -76,34 +68,24 @@ class AutostelsClient:
             return []
     
     def _parse_step1_response(self, xml_text: str) -> List[Dict]:
-        """Парсит ответ Step1 и возвращает список брендов + SessionGUID"""
+        """Парсит ответ Step1 и возвращает список брендов"""
         try:
             root = ET.fromstring(xml_text)
             
-            # Извлекаем результат из SOAP envelope
+            # Находим результат (вложенный XML в виде строки)
             ns = {'s': 'http://schemas.xmlsoap.org/soap/envelope/',
                   't': 'http://tempuri.org/'}
             
-            # Находим SearchOfferStep1Result
             result_elem = root.find('.//t:SearchOfferStep1Result', ns)
-            
             if result_elem is None or not result_elem.text:
-                logger.warning("No SearchOfferStep1Result found in response")
+                logger.info("No result element found")
                 return []
             
-            # Парсим внутренний XML из результата
-            result_xml = result_elem.text
-            result_root = ET.fromstring(result_xml)
-            
-            # ВАЖНО: Извлекаем SessionGUID для использования в Step2
-            session_guid = result_root.findtext('.//SessionGUID', '')
-            if session_guid:
-                self.session_guid = session_guid
-                logger.info(f"Got SessionGUID from Step1: {session_guid[:20]}...")
+            # Парсим вложенный XML
+            inner_root = ET.fromstring(result_elem.text)
             
             brands = []
-            # Ищем все элементы row внутри rows
-            for row in result_root.findall('.//row'):
+            for row in inner_root.findall('.//row'):
                 product_id = row.findtext('ProductID', '')
                 producer_name = row.findtext('ProducerName', '')
                 
@@ -111,8 +93,7 @@ class AutostelsClient:
                     brands.append({
                         'product_id': product_id,
                         'producer_name': producer_name,
-                        'article': row.findtext('CodeAsIs', ''),
-                        'name': row.findtext('ProductName', '')
+                        'stocks_only': row.findtext('StocksOnly', '0')
                     })
             
             logger.info(f"Found {len(brands)} brands for article")
@@ -121,42 +102,36 @@ class AutostelsClient:
         except Exception as e:
             logger.error(f"Error parsing step1 response: {str(e)}")
             import traceback
-            logger.error(traceback.format_exc())
+            traceback.print_exc()
             return []
     
-    def search_step2(self, product_id: str, in_stock: int = 1, show_cross: int = 2) -> List[Dict]:
+    def search_step2(self, product_id: str, stocks_only: int = 0, in_stock: int = 1, show_cross: int = 1) -> List[Dict]:
         """
         Шаг 2: Получение предложений по product_id
         in_stock: 1 - все предложения, 2 - только в наличии
-        show_cross: 1 - без аналогов, 2 - с аналогами
+        show_cross: 0 - без аналогов, 1 - с аналогами
         """
         try:
-            # Формируем XML параметры для CDATA (согласно документации v3.6)
-            # Используем SessionGUID если есть, иначе UserLogin/UserPass
-            # ResultFilter: 0 - старый формат, 2 - новый формат (используем 2)
-            session_info = self._create_session_info(use_session_guid=bool(self.session_guid))
-            
-            search_params = f"""<root>
-   {session_info}
-   <Search ResultFilter="2">
-      <ProductID>{product_id}</ProductID>
-      <StocksOnly>0</StocksOnly>
-      <InStock>{in_stock}</InStock>
-      <ShowCross>{show_cross}</ShowCross>
-      <PeriodMin>-1</PeriodMin>
-      <PeriodMax>-1</PeriodMax>
-   </Search>
+            # XML параметры
+            xml_params = f"""<root>
+  {self._create_session_info()}
+  <Search ResultFilter="0">
+    <ProductID>{product_id}</ProductID>
+    <StocksOnly>{stocks_only}</StocksOnly>
+    <InStock>{in_stock}</InStock>
+    <ShowCross>{show_cross}</ShowCross>
+    <PeriodMin>-1</PeriodMin>
+    <PeriodMax>-1</PeriodMax>
+  </Search>
 </root>"""
             
-            # Формируем SOAP запрос с CDATA (как в документации)
-            soap_body = f"""<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <tem:SearchOfferStep2>
-         <tem:SearchParametersXml><![CDATA[{search_params}]]></tem:SearchParametersXml>
-      </tem:SearchOfferStep2>
-   </soapenv:Body>
+            soap_body = f"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:SearchOfferStep2>
+      <tem:SearchParametersXml><![CDATA[{xml_params}]]></tem:SearchParametersXml>
+    </tem:SearchOfferStep2>
+  </soapenv:Body>
 </soapenv:Envelope>"""
             
             headers = {
@@ -188,63 +163,38 @@ class AutostelsClient:
         try:
             root = ET.fromstring(xml_text)
             
-            # Извлекаем результат из SOAP envelope
             ns = {'s': 'http://schemas.xmlsoap.org/soap/envelope/',
                   't': 'http://tempuri.org/'}
             
-            # Находим SearchOfferStep2Result
             result_elem = root.find('.//t:SearchOfferStep2Result', ns)
-            
             if result_elem is None or not result_elem.text:
-                logger.warning("No SearchOfferStep2Result found in response")
+                logger.info("No result element found in step2")
                 return []
             
-            # Парсим внутренний XML из результата
-            result_xml = result_elem.text
-            logger.debug(f"Step2 result XML: {result_xml[:500]}")
-            result_root = ET.fromstring(result_xml)
-            
-            # Проверяем на ошибки в результате
-            error_elem = result_root.find('.//error')
-            if error_elem is not None:
-                error_state = error_elem.get('state', 'unknown')
-                error_msg = error_elem.findtext('message', 'Unknown error')
-                logger.warning(f"Step2 returned error: state={error_state}, message={error_msg}")
-                return []
+            # Парсим вложенный XML
+            inner_root = ET.fromstring(result_elem.text)
             
             offers = []
-            # Ищем все элементы row внутри rows
-            rows = result_root.findall('.//row')
-            logger.debug(f"Found {len(rows)} rows in Step2 response")
-            
-            for row in rows:
+            for row in inner_root.findall('.//row'):
                 try:
-                    # Извлекаем данные из row
-                    price = row.findtext('Price', '0')
-                    quantity = row.findtext('Quantity', '0')
-                    period_min = row.findtext('PeriodMin', '0')
-                    period_max = row.findtext('PeriodMax', '0')
-                    is_cross = row.findtext('IsCross', '0')
-                    is_availability = row.findtext('IsAvailability', '0')
-                    
                     offer = {
-                        'article': row.findtext('ProductCode', ''),
-                        'brand': row.findtext('ProducerName', ''),
+                        'article': row.findtext('CodeAsIs', ''),
+                        'brand': row.findtext('ManufacturerName', ''),
                         'name': row.findtext('ProductName', ''),
-                        'price': float(price) if price else 0.0,
-                        'quantity': int(quantity) if quantity else 0,
-                        'delivery_days': int(period_min) if period_min else 0,
-                        'delivery_days_max': int(period_max) if period_max else 0,
-                        'warehouse': row.findtext('ProviderName', 'Autostels'),
-                        'is_cross': int(is_cross) == 1 if is_cross else False,
-                        'in_stock': int(is_availability) == 1 if is_availability else False,
+                        'price': float(row.findtext('Price', '0')),
+                        'quantity': int(row.findtext('Quantity', '0')),
+                        'delivery_days': int(row.findtext('PeriodMin', '0')),
+                        'delivery_days_max': int(row.findtext('PeriodMax', '0')),
+                        'warehouse': row.findtext('OfferName', 'Autostels'),
+                        'is_cross': int(row.findtext('IsCross', '0')) == 1,
+                        'in_stock': int(row.findtext('IsAvailability', '0')) == 1,
                         'provider': 'autostels'
                     }
                     
                     offers.append(offer)
                     
                 except Exception as e:
-                    logger.warning(f"Error parsing offer element: {str(e)}")
+                    logger.warning(f"Error parsing row element: {str(e)}")
                     continue
             
             logger.info(f"Parsed {len(offers)} offers from step2")
@@ -252,32 +202,134 @@ class AutostelsClient:
             
         except Exception as e:
             logger.error(f"Error parsing step2 response: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
             return []
     
-    def search_by_article(self, article: str, in_stock: int = 1, show_cross: int = 2) -> List[Dict]:
+    def search_joint(self, article: str, brand: str = "", in_stock: int = 0, show_cross: int = 1) -> List[Dict]:
         """
-        Полный поиск по артикулу (Step1 + Step2)
-        in_stock: 1 - все предложения, 2 - только в наличии
-        show_cross: 1 - без аналогов, 2 - с аналогами
+        Комбинированный поиск (SearchOfferJoint) когда известен бренд
+        in_stock: 0 - все, 1 - только в наличии
+        show_cross: 0 - без аналогов, 1 - с аналогами
+        """
+        try:
+            # XML параметры
+            xml_params = f"""<root>
+  {self._create_session_info()}
+  <Search ResultFilter="0">
+    <ProductCode>{article}</ProductCode>
+    <ProducerName>{brand}</ProducerName>
+    <StocksOnly>0</StocksOnly>
+    <InStock>{in_stock}</InStock>
+    <ShowCross>{show_cross}</ShowCross>
+    <PeriodMin>-1</PeriodMin>
+    <PeriodMax>-1</PeriodMax>
+  </Search>
+</root>"""
+            
+            soap_body = f"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <tem:SearchOfferJoint>
+      <tem:SearchParametersXml><![CDATA[{xml_params}]]></tem:SearchParametersXml>
+    </tem:SearchOfferJoint>
+  </soapenv:Body>
+</soapenv:Envelope>"""
+            
+            headers = {
+                'Content-Type': 'text/xml; charset=utf-8',
+                'SOAPAction': 'http://tempuri.org/IAS2CSearch/SearchOfferJoint'
+            }
+            
+            response = requests.post(
+                self.search_url,
+                data=soap_body.encode('utf-8'),
+                headers=headers,
+                timeout=10
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"SearchJoint failed with status {response.status_code}")
+                logger.error(f"Response text: {response.text[:500]}")
+                return []
+            
+            # Парсим ответ
+            return self._parse_joint_response(response.text)
+            
+        except Exception as e:
+            logger.error(f"Error in search_joint: {str(e)}")
+            return []
+    
+    def _parse_joint_response(self, xml_text: str) -> List[Dict]:
+        """Парсит ответ SearchOfferJoint"""
+        try:
+            root = ET.fromstring(xml_text)
+            
+            ns = {'s': 'http://schemas.xmlsoap.org/soap/envelope/',
+                  't': 'http://tempuri.org/'}
+            
+            result_elem = root.find('.//t:SearchOfferJointResult', ns)
+            if result_elem is None or not result_elem.text:
+                logger.info("No result element found in SearchJoint")
+                return []
+            
+            # Парсим вложенный XML
+            inner_root = ET.fromstring(result_elem.text)
+            
+            offers = []
+            for row in inner_root.findall('.//row'):
+                try:
+                    offer = {
+                        'article': row.findtext('CodeAsIs', ''),
+                        'brand': row.findtext('ManufacturerName', ''),
+                        'name': row.findtext('ProductName', ''),
+                        'price': float(row.findtext('Price', '0')),
+                        'quantity': int(row.findtext('Quantity', '0')),
+                        'delivery_days': int(row.findtext('PeriodMin', '0')),
+                        'delivery_days_max': int(row.findtext('PeriodMax', '0')),
+                        'warehouse': row.findtext('OfferName', 'Autostels'),
+                        'is_cross': int(row.findtext('IsCross', '0')) == 1,
+                        'in_stock': int(row.findtext('IsAvailability', '0')) == 1,
+                        'provider': 'autostels'
+                    }
+                    
+                    offers.append(offer)
+                    
+                except Exception as e:
+                    logger.warning(f"Error parsing row element: {str(e)}")
+                    continue
+            
+            logger.info(f"Parsed {len(offers)} offers from SearchJoint")
+            return offers
+            
+        except Exception as e:
+            logger.error(f"Error parsing joint response: {str(e)}")
+            return []
+    
+    def search_by_article(self, article: str, brand: str = "", in_stock: int = 0, show_cross: int = 1) -> List[Dict]:
+        """
+        Полный поиск по артикулу
+        Если бренд известен - использует SearchOfferJoint
+        Иначе - пробует Step1 + Step2
         """
         logger.info(f"Searching Autostels for article: {article}")
         
+        # Если бренд известен - используем SearchOfferJoint
+        if brand:
+            return self.search_joint(article, brand, in_stock, show_cross)
+        
+        # Иначе пробуем двухшаговый поиск
         # Шаг 1: Получаем список брендов
         brands = self.search_step1(article)
         
         if not brands:
             logger.info("No brands found in step1")
-            return []
-        
-        logger.info(f"Found {len(brands)} brands in step1, proceeding to step2")
+            # Пробуем поискать с пустым брендом через SearchOfferJoint
+            return self.search_joint(article, "", in_stock, show_cross)
         
         # Шаг 2: Получаем предложения для каждого бренда
         all_offers = []
-        for brand in brands[:5]:  # Ограничиваем 5 брендами для оптимизации
-            logger.info(f"Searching step2 for brand: {brand['producer_name']}")
-            offers = self.search_step2(brand['product_id'], in_stock, show_cross)
+        for brand_info in brands:
+            stocks_only = int(brand_info.get('stocks_only', 0))
+            offers = self.search_step2(brand_info['product_id'], stocks_only, in_stock, show_cross)
             all_offers.extend(offers)
         
         logger.info(f"Found total {len(all_offers)} offers from Autostels")
