@@ -176,9 +176,10 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
     
     # Применяем фильтр по наличию если нужно
     if availability_filter == 'in_stock_tyumen':
-        # "В наличии" = склады Тюмени с быстрой доставкой (0-1 день)
-        result = [p for p in result if 'тюмень' in p.get('warehouse', '').lower() and p.get('delivery_days', 999) <= 1]
+        # "В наличии" = быстрая доставка (0-1 день) - товары доступны сегодня/завтра
+        result = [p for p in result if p.get('delivery_days', 999) <= 1]
     elif availability_filter == 'on_order':
+        # "Под заказ" = доставка > 1 дня
         result = [p for p in result if p.get('delivery_days', 999) > 1]
     
     # Добавляем флаги для frontend
