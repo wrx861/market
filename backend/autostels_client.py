@@ -72,7 +72,7 @@ class AutostelsClient:
             return []
     
     def _parse_step1_response(self, xml_text: str) -> List[Dict]:
-        """Парсит ответ Step1 и возвращает список брендов"""
+        """Парсит ответ Step1 и возвращает список брендов + SessionGUID"""
         try:
             root = ET.fromstring(xml_text)
             
@@ -90,6 +90,12 @@ class AutostelsClient:
             # Парсим внутренний XML из результата
             result_xml = result_elem.text
             result_root = ET.fromstring(result_xml)
+            
+            # ВАЖНО: Извлекаем SessionGUID для использования в Step2
+            session_guid = result_root.findtext('.//SessionGUID', '')
+            if session_guid:
+                self.session_guid = session_guid
+                logger.info(f"Got SessionGUID from Step1: {session_guid[:20]}...")
             
             brands = []
             # Ищем все элементы row внутри rows
