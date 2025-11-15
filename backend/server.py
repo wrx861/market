@@ -51,8 +51,8 @@ def is_exact_match(search_article: str, result_article: str) -> bool:
 def filter_relevant_results(parts: list, search_article: str) -> list:
     """
     Фильтрует результаты, оставляя только релевантные:
-    - Точное совпадение артикула
-    - Аналоги (is_cross=true) с точным совпадением артикула
+    - Точное совпадение артикула (с учетом префиксов ST-, EX- и т.д.)
+    - Аналоги с тем же нормализованным артикулом
     - НЕ показывает комплектующие (сальники, кольца и т.д.)
     - Убирает позиции с нулевой ценой или количеством
     """
@@ -62,6 +62,13 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
     filtered = []
     search_normalized = normalize_article(search_article)
     
+    # Убираем префиксы из поискового запроса для поиска оригинала
+    search_without_prefix = search_normalized
+    for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'R', 'SR', 'PSG', 'AGS', 'SL']:
+        if search_normalized.startswith(prefix):
+            search_without_prefix = search_normalized[len(prefix):]
+            break
+    
     for part in parts:
         part_article = part.get('article', '')
         part_normalized = normalize_article(part_article)
@@ -70,11 +77,14 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
         if part.get('price', 0) == 0 or part.get('quantity', 0) == 0:
             continue
         
-        # Проверяем точное совпадение артикула
+        # Проверяем точное совпадение (с учетом префиксов)
         if search_normalized == part_normalized:
             filtered.append(part)
-        # Или если это аналог с тем же нормализованным артикулом
-        elif part.get('is_cross', False) and search_normalized in part_normalized:
+        # Проверяем совпадение без префикса (чтобы найти оригинал)
+        elif search_without_prefix == part_normalized:
+            filtered.append(part)
+        # Проверяем обратное - оригинал содержится в запросе с префиксом
+        elif part_normalized in search_normalized:
             filtered.append(part)
     
     return filtered
