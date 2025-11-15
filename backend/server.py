@@ -38,11 +38,50 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 
-def deduplicate_and_prioritize(parts: list, availability_filter=None, sort_by=None) -> list:
+def normalize_article(article: str) -> str:
+    """Нормализует артикул для сравнения: убирает пробелы, дефисы, приводит к верхнему регистру"""
+    return article.upper().replace('-', '').replace(' ', '').replace('/', '')
+
+
+def is_exact_match(search_article: str, result_article: str) -> bool:
+    """Проверяет точное совпадение артикулов (с учетом нормализации)"""
+    return normalize_article(search_article) == normalize_article(result_article)
+
+
+def filter_relevant_results(parts: list, search_article: str) -> list:
+    """
+    Фильтрует результаты, оставляя только релевантные:
+    - Точное совпадение артикула
+    - Аналоги (is_cross=true) с точным совпадением артикула
+    - НЕ показывает комплектующие (сальники, кольца и т.д.)
+    """
+    if not parts:
+        return []
+    
+    filtered = []
+    search_normalized = normalize_article(search_article)
+    
+    for part in parts:
+        part_article = part.get('article', '')
+        part_normalized = normalize_article(part_article)
+        
+        # Проверяем точное совпадение артикула
+        if search_normalized == part_normalized:
+            filtered.append(part)
+        # Или если это аналог с тем же нормализованным артикулом
+        elif part.get('is_cross', False) and search_normalized in part_normalized:
+            filtered.append(part)
+    
+    return filtered
+
+
+def deduplicate_and_prioritize(parts: list, search_article: str = "", availability_filter=None, sort_by=None) -> list:
     """
     Объединяет результаты от разных поставщиков:
-    - Для одинаковых артикулов оставляет самую дешевую или самую быструю доставку
-    - Если используется фильтр по складу, сохраняет все варианты со складов
+    - Для одинаковых артикулов оставляет 2 позиции: самую дешевую + самую быструю
+    - Если одна позиция и дешевая и быстрая - оставляем 1
+    - Разные артикулы - показываем все
+    - Приоритет: оригинал → запрошенный артикул → аналоги
     """
     if not parts:
         return []
@@ -64,45 +103,84 @@ def deduplicate_and_prioritize(parts: list, availability_filter=None, sort_by=No
         
         result = list(grouped.values())
     else:
-        # Обычная дедупликация - группируем по артикулу + бренд
+        # Новая дедупликация: для одинаковых артикулов оставляем 2 позиции
+        # 1) самую дешевую, 2) самую быструю доставку
         grouped = {}
+        
         for part in parts:
-            key = f"{part['article']}_{part['brand']}".upper()
+            # Нормализуем артикул для группировки
+            article_normalized = normalize_article(part['article'])
+            brand = part.get('brand', 'UNKNOWN').upper()
+            key = f"{article_normalized}_{brand}"
             
             if key not in grouped:
-                grouped[key] = part
+                grouped[key] = {'cheapest': part, 'fastest': part}
             else:
-                # Оставляем лучшее предложение
-                existing = grouped[key]
+                # Обновляем самую дешевую
+                if part['price'] < grouped[key]['cheapest']['price']:
+                    grouped[key]['cheapest'] = part
                 
-                # Приоритет 1: Быстрая доставка
-                if part['delivery_days'] < existing['delivery_days']:
-                    grouped[key] = part
-                # Приоритет 2: Если доставка одинаковая - берем дешевле
-                elif part['delivery_days'] == existing['delivery_days']:
-                    if part['price'] < existing['price']:
-                        grouped[key] = part
+                # Обновляем самую быструю
+                if part['delivery_days'] < grouped[key]['fastest']['delivery_days']:
+                    grouped[key]['fastest'] = part
         
-        result = list(grouped.values())
+        # Собираем результат: дешевую + быструю (если они разные)
+        result = []
+        for key, offers in grouped.items():
+            cheapest = offers['cheapest']
+            fastest = offers['fastest']
+            
+            # Добавляем самую дешевую
+            result.append(cheapest)
+            
+            # Добавляем самую быструю только если это другая позиция
+            if cheapest != fastest:
+                # Проверяем что это действительно разные предложения
+                if (cheapest.get('provider') != fastest.get('provider') or
+                    cheapest.get('warehouse') != fastest.get('warehouse') or
+                    cheapest.get('price') != fastest.get('price')):
+                    result.append(fastest)
     
     # Применяем фильтр по наличию если нужно
     if availability_filter == 'in_stock_tyumen':
         # "В наличии" = склады Тюмени с быстрой доставкой (0-1 день)
-        # delivery_period = 1 означает что склад закрыт сейчас, откроется завтра утром
         result = [p for p in result if 'тюмень' in p.get('warehouse', '').lower() and p.get('delivery_days', 999) <= 1]
     elif availability_filter == 'on_order':
         result = [p for p in result if p.get('delivery_days', 999) > 1]
     
+    # Добавляем флаги для frontend
+    search_normalized = normalize_article(search_article) if search_article else ""
+    for part in result:
+        part_normalized = normalize_article(part.get('article', ''))
+        
+        # Помечаем оригинальный артикул (не аналог)
+        part['is_original'] = not part.get('is_cross', False)
+        
+        # Помечаем запрошенный артикул
+        part['is_requested'] = (part_normalized == search_normalized)
+    
+    # Приоритизация результатов
+    def get_priority(part):
+        # 1. Оригинал (не аналог) - высший приоритет
+        if part.get('is_original', False):
+            return 0
+        # 2. Запрошенный артикул - второй приоритет  
+        elif part.get('is_requested', False):
+            return 1
+        # 3. Остальные аналоги
+        else:
+            return 2
+    
     # Сортировка
     if sort_by == 'price_asc':
-        result.sort(key=lambda x: x.get('price', 999999))
+        result.sort(key=lambda x: (get_priority(x), x.get('price', 999999)))
     elif sort_by == 'price_desc':
-        result.sort(key=lambda x: x.get('price', 0), reverse=True)
+        result.sort(key=lambda x: (get_priority(x), -x.get('price', 0)))
     elif sort_by == 'delivery_asc':
-        result.sort(key=lambda x: x.get('delivery_days', 999))
+        result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999)))
     else:
-        # По умолчанию: сначала оригинал, потом по доставке
-        result.sort(key=lambda x: (x.get('is_cross', False), x.get('delivery_days', 999)))
+        # По умолчанию: приоритет (оригинал > запрошенный > аналоги), потом по доставке
+        result.sort(key=lambda x: (get_priority(x), x.get('delivery_days', 999)))
     
     return result
 
