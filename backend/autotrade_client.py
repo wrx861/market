@@ -233,11 +233,16 @@ class AutotradeClient:
             if quantity == 0:
                 return None
             
-            # Определяем статус наличия: есть количество и быстрая доставка (0-1 день)
-            # delivery_period = 1 означает что склад закрыт сейчас, откроется завтра
-            # Для складов Тюмени это считается "в наличии"
-            is_tyumen = 'тюмень' in warehouse.lower()
-            in_stock = quantity > 0 and (delivery_days <= 1 if is_tyumen else delivery_days == 0)
+            # Определяем статус наличия для Autotrade:
+            # delivery_period = 0 - товар в наличии прямо сейчас
+            # delivery_period = 1 - склад закрыт, откроется завтра
+            # Только Екатеринбург и Тюмень имеют реальную доставку "завтра"
+            # Остальные города (Сургут, Ростов и т.д.) - это доставка через несколько дней
+            warehouse_lower = warehouse.lower()
+            is_local_warehouse = any(city in warehouse_lower for city in ['тюмень', 'екатеринбург'])
+            
+            # "В наличии" только для локальных складов с delivery ≤ 1
+            in_stock = quantity > 0 and is_local_warehouse and delivery_days <= 1
             
             return {
                 'article': article,
