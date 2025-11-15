@@ -4770,54 +4770,31 @@ def check_corrected_autostels_logs():
     print("✅ Объединённые результаты от Rossko и Autostels")
 
 if __name__ == "__main__":
-    print("🚀 STARTING BACKEND API TESTING - FOCUS ON BERG API INTEGRATION")
+    print("🚀 STARTING AUTOSTELS API INTEGRATION TESTING")
     print("=" * 80)
     
-    # Test health endpoint first
-    test_health_endpoint()
-    
-    # Test Berg API integration (MAIN TEST FROM REVIEW REQUEST)
-    print(f"\n{'='*80}")
-    print("🎯 MAIN TEST: BERG API INTEGRATION")
-    print(f"{'='*80}")
-    
-    berg_success, berg_data = test_berg_api_integration()
-    
-    # Test 'В наличии' (in_stock_tyumen) filter for ST-dtw1-395-0 - SUPPORTING TEST
-    print(f"\n{'='*80}")
-    print("SUPPORTING TEST: 'В НАЛИЧИИ' FILTER FOR ST-DTW1-395-0")
-    print(f"{'='*80}")
-    
-    filter_success, filter_data = test_in_stock_tyumen_filter()
-    
-    # Test FIXED Autotrade API parsing for ST-dtw1-395-0 - SUPPORTING TEST
-    print(f"\n{'='*80}")
-    print("SUPPORTING TEST: AUTOTRADE API PARSING")
-    print(f"{'='*80}")
-    
-    autotrade_success, autotrade_response = test_autotrade_fixed_parsing_st_dtw1_395_0()
+    # Main test: Autostels API integration according to review request
+    autostels_success, autostels_data = test_autostels_api_integration()
     
     # Final summary
     print(f"\n{'='*80}")
-    print("BACKEND TESTING SUMMARY")
+    print("AUTOSTELS API TESTING SUMMARY")
     print(f"{'='*80}")
-    print(f"✅ Health endpoint: Working")
-    print(f"🎯 Berg API Integration (MAIN): {'✅ PASSED' if berg_success else '❌ FAILED'}")
-    print(f"✅ 'В наличии' Filter: {'✅ PASSED' if filter_success else '❌ FAILED'}")
-    print(f"✅ Autotrade Parsing: {'✅ PASSED' if autotrade_success else '❌ FAILED'}")
     
-    if berg_success:
-        print(f"\n🎉 BERG API INTEGRATION SUCCESSFUL!")
-        print(f"✅ Berg API теперь работает и возвращает результаты")
-        print(f"✅ Параллельный поиск трех поставщиков (Rossko + Autotrade + Berg) функционирует")
-        print(f"✅ Результаты объединяются корректно")
-        print(f"✅ Дедупликация работает")
-        print(f"✅ BERG_API_KEY загружается из .env файла")
-        print(f"✅ Структура ответа: article, brand, name, price, quantity, warehouse, delivery_days, in_stock, provider='berg'")
+    if autostels_success:
+        print(f"🎉 AUTOSTELS API INTEGRATION SUCCESSFUL!")
+        print(f"✅ Autostels API теперь работает и возвращает результаты")
+        print(f"✅ Все 4 поставщика работают: Rossko, Autotrade, Berg, Autostels")
+        print(f"✅ Нет ошибок SOAP fault 'ActionNotSupported'")
+        print(f"✅ Нет ошибок XSD validation")
+        print(f"✅ Результаты корректно парсятся и форматируются")
+        print(f"✅ Дедупликация между поставщиками работает")
+        print(f"✅ Поле provider='autostels' корректно установлено")
     else:
-        print(f"\n❌ BERG API INTEGRATION FAILED!")
-        print(f"❌ Berg API не возвращает результатов")
-        print(f"❌ Возможные проблемы: API ключ, endpoint URL, или проблемы поставщика")
+        print(f"❌ AUTOSTELS API INTEGRATION FAILED!")
+        print(f"❌ Autostels API не возвращает результатов или имеет ошибки")
+        print(f"❌ Возможные проблемы: SOAP клиент, учетные данные, или проблемы поставщика")
+        print(f"⚠️  Проверьте логи выше для детального анализа ошибок")
         print(f"⚠️  Система устойчива - другие поставщики работают")
         print(f"❌ Требуется дополнительная диагностика")
     
