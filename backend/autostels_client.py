@@ -28,24 +28,24 @@ class AutostelsClient:
         Шаг 1: Поиск брендов по артикулу
         """
         try:
-            # Формируем SOAP запрос (атрибуты как в документации)
+            # Формируем XML параметры для CDATA (согласно документации v3.6)
+            search_params = f"""<root>
+   {self._create_session_info()}
+   <Search>
+      <Key>{article}</Key>
+   </Search>
+</root>"""
+            
+            # Формируем SOAP запрос с CDATA (как в документации)
             soap_body = f"""<?xml version="1.0" encoding="utf-8"?>
-<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-               xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
-               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-  <soap:Body>
-    <SearchOfferStep1 xmlns="http://tempuri.org/">
-      <request>
-        <root>
-          {self._create_session_info()}
-          <Search>
-            <Key>{article}</Key>
-          </Search>
-        </root>
-      </request>
-    </SearchOfferStep1>
-  </soap:Body>
-</soap:Envelope>"""
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <tem:SearchOfferStep1>
+         <tem:SearchParametersXml><![CDATA[{search_params}]]></tem:SearchParametersXml>
+      </tem:SearchOfferStep1>
+   </soapenv:Body>
+</soapenv:Envelope>"""
             
             headers = {
                 'Content-Type': 'text/xml; charset=utf-8',
