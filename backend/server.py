@@ -247,15 +247,21 @@ async def search_by_article(request: SearchArticleRequest):
             logger.error(f"Berg search failed: {str(berg_parts)}")
             berg_parts = []
         
-        # Применяем наценку к Autotrade и Berg если нужно
+        if isinstance(autostels_parts, Exception):
+            logger.error(f"Autostels search failed: {str(autostels_parts)}")
+            autostels_parts = []
+        
+        # Применяем наценку к Autotrade, Berg и Autostels если нужно
         if markup_percent > 0:
             for part in autotrade_parts:
                 part['price'] = round(part['price'] * (1 + markup_percent / 100), 2)
             for part in berg_parts:
                 part['price'] = round(part['price'] * (1 + markup_percent / 100), 2)
+            for part in autostels_parts:
+                part['price'] = round(part['price'] * (1 + markup_percent / 100), 2)
         
         # Объединяем результаты и дедуплицируем
-        all_parts = rossko_parts + autotrade_parts + berg_parts
+        all_parts = rossko_parts + autotrade_parts + berg_parts + autostels_parts
         parts = deduplicate_and_prioritize(all_parts, availability_filter, sort_by)
         
         # Сохраняем историю поиска
