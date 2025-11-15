@@ -130,10 +130,6 @@ input_credentials() {
     read -p "Введите TELEGRAM_ADMIN_ID: " TELEGRAM_ADMIN_ID
     echo ""
     
-    echo -e "${YELLOW}Google AI Studio (Gemini)${NC}"
-    read -p "Введите GOOGLE_API_KEY: " GOOGLE_API_KEY
-    echo ""
-    
     echo -e "${YELLOW}Rossko API (поставщик запчастей)${NC}"
     read -p "Введите ROSSKO_API_KEY1: " ROSSKO_API_KEY1
     read -p "Введите ROSSKO_API_KEY2: " ROSSKO_API_KEY2
@@ -150,13 +146,11 @@ input_credentials() {
     read -p "Введите BERG_API_KEY: " BERG_API_KEY
     echo ""
     
-    echo -e "${YELLOW}PartsAPI.ru (поиск по VIN)${NC}"
-    read -p "Введите PARTSAPI_KEY: " PARTSAPI_KEY
+    echo -e "${YELLOW}Autostels API (поставщик запчастей)${NC}"
+    read -p "Введите логин (email): " AUTOSTELS_LOGIN
+    read -sp "Введите пароль: " AUTOSTELS_PASSWORD
     echo ""
-    
-    echo -e "${YELLOW}OpenAI API (AI диагностика)${NC}"
-    read -sp "Введите OpenAI API ключ: " OPENAI_API_KEY
-    echo ""
+    read -p "Введите Parent ID: " AUTOSTELS_PARENT_ID
     echo ""
     
     echo -e "${GREEN}✓ Все данные получены${NC}"
