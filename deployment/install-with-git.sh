@@ -256,24 +256,50 @@ install_ssl() {
     docker-compose down 2>/dev/null || true
     
     # Получение сертификата
-    certbot certonly --standalone \
+    if certbot certonly --standalone \
         --non-interactive \
         --agree-tos \
         --email admin@$DOMAIN \
         -d $DOMAIN \
-        --preferred-challenges http
-    
-    # Копирование сертификатов
-    cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem $APP_DIR/ssl/
-    cp /etc/letsencrypt/live/$DOMAIN/privkey.pem $APP_DIR/ssl/
+        --preferred-challenges http; then
+        
+        # Копирование сертификатов
+        mkdir -p $APP_DIR/ssl
+        cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem $APP_DIR/ssl/
+        cp /etc/letsencrypt/live/$DOMAIN/privkey.pem $APP_DIR/ssl/
+        
+        # Настройка автоматического обновления
+        (crontab -l 2>/dev/null | grep -v "certbot renew"; echo "0 5 * * 0 ufw allow 80 && certbot renew --quiet && cp /etc/letsencrypt/live/$DOMAIN/*.pem $APP_DIR/ssl/ && docker-compose -f $APP_DIR/docker-compose.yml restart nginx && ufw delete allow 80") | crontab -
+        
+        echo -e "${GREEN}✓ SSL сертификат установлен${NC}"
+    else
+        echo -e "${YELLOW}⚠️  Ошибка получения SSL сертификата${NC}"
+        echo -e "${YELLOW}Возможные причины:${NC}"
+        echo -e "  1. Достигнут лимит Let's Encrypt (5 сертификатов за неделю)"
+        echo -e "  2. Домен не направлен на этот сервер"
+        echo ""
+        
+        # Проверяем есть ли существующий сертификат
+        if [ -d "/etc/letsencrypt/live/$DOMAIN" ]; then
+            echo -e "${GREEN}✓ Найден существующий сертификат, использую его${NC}"
+            mkdir -p $APP_DIR/ssl
+            cp /etc/letsencrypt/live/$DOMAIN/fullchain.pem $APP_DIR/ssl/
+            cp /etc/letsencrypt/live/$DOMAIN/privkey.pem $APP_DIR/ssl/
+        else
+            echo -e "${YELLOW}⚠️  Установка продолжится без SSL${NC}"
+            echo -e "${YELLOW}Приложение будет доступно по HTTP (порт 80)${NC}"
+            echo -e "${YELLOW}Для получения SSL позже запустите: sudo certbot certonly --standalone -d $DOMAIN${NC}"
+            mkdir -p $APP_DIR/ssl
+            # Создаем самоподписанный сертификат для работы Nginx
+            openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout $APP_DIR/ssl/privkey.pem \
+                -out $APP_DIR/ssl/fullchain.pem \
+                -subj "/CN=$DOMAIN"
+        fi
+    fi
     
     # Закрытие порта 80
     ufw delete allow 80 2>/dev/null || true
-    
-    # Настройка автоматического обновления
-    (crontab -l 2>/dev/null | grep -v "certbot renew"; echo "0 5 * * 0 ufw allow 80 && certbot renew --quiet && cp /etc/letsencrypt/live/$DOMAIN/*.pem $APP_DIR/ssl/ && docker-compose -f $APP_DIR/docker-compose.yml restart nginx && ufw delete allow 80") | crontab -
-    
-    echo -e "${GREEN}✓ SSL сертификат установлен${NC}"
 }
 
 # Запуск проекта
