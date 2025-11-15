@@ -4810,7 +4810,7 @@ if __name__ == "__main__":
         print(f"   ❌ Проверьте API интеграцию")
     
     # Overall result
-    main_test_passed = filter_success
+    main_test_passed = autostels_success
     supporting_tests_passed = autotrade_success
     
     print(f"\n{'='*80}")
