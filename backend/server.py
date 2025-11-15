@@ -64,15 +64,19 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
     filtered = []
     
     for part in parts:
-        part_name = part.get('name', '').lower()
+        part_name = part.get('name', '').strip()
         
-        # Пропускаем позиции с нулевой ценой или количеством (обычно Berg "Нет в наличии")
+        # Пропускаем позиции с нулевой ценой или количеством
         if part.get('price', 0) <= 0 or part.get('quantity', 0) <= 0:
             continue
         
+        # Пропускаем позиции БЕЗ названия (только артикул)
+        if not part_name or len(part_name) < 3:
+            continue
+        
         # Фильтруем только комплектующие по ключевым словам в названии
-        # Комплектующие: сальники, кольца, резиновые уплотнители, хомуты, тефлоновые кольца, ремкомплекты
-        is_component = any(keyword in part_name for keyword in [
+        part_name_lower = part_name.lower()
+        is_component = any(keyword in part_name_lower for keyword in [
             'сальник', 'кольцо', 'резинов', 'хомут', 'тефлон', 
             'ремкомплект', 'ремонтный комплект', 'заглушка', 'втулк',
             'пыльник', 'чехол', 'манжет', 'уплотнител'
