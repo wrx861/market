@@ -1622,6 +1622,10 @@ async def diagnose_obd_code(request: dict):
         
         logger.info(f"Starting OBD diagnosis for {obd_code} on {vehicle_info}")
         
+        # Проверяем доступен ли AI клиент
+        if not ai_client:
+            raise HTTPException(status_code=503, detail="AI diagnostics service not available - OpenAI API key not configured")
+        
         # Проверяем кэш - может быть уже была диагностика этого кода для этого авто
         cache_key = f"{vehicle_info}_{obd_code}"
         cached = await db.diagnostic_cache.find_one({"cache_key": cache_key}, {"_id": 0})
@@ -1635,24 +1639,38 @@ async def diagnose_obd_code(request: dict):
                 diagnosis = cached['diagnosis']
             else:
                 # Кэш устарел
-                diagnosis = ai_client.diagnose_obd_code(obd_code, vehicle_info)
-                await db.diagnostic_cache.update_one(
-                    {"cache_key": cache_key},
-                    {"$set": {"diagnosis": diagnosis, "created_at": datetime.utcnow().isoformat()}},
-                    upsert=True
-                )
+                try:
+                    diagnosis = ai_client.diagnose_obd_code(obd_code, vehicle_info)
+                    await db.diagnostic_cache.update_one(
+                        {"cache_key": cache_key},
+                        {"$set": {"diagnosis": diagnosis, "created_at": datetime.utcnow().isoformat()}},
+                        upsert=True
+                    )
+                except Exception as e:
+                    logger.error(f"AI diagnosis failed: {str(e)}")
+                    diagnosis = cached['diagnosis']  # Используем старый кэш
         else:
             # Новая диагностика
-            diagnosis = ai_client.diagnose_obd_code(obd_code, vehicle_info)
-            
-            # Сохраняем в кэш
-            await db.diagnostic_cache.insert_one({
-                "cache_key": cache_key,
-                "obd_code": obd_code,
-                "vehicle_info": vehicle_info,
-                "diagnosis": diagnosis,
-                "created_at": datetime.utcnow().isoformat()
-            })
+            try:
+                diagnosis = ai_client.diagnose_obd_code(obd_code, vehicle_info)
+                
+                # Сохраняем в кэш
+                await db.diagnostic_cache.insert_one({
+                    "cache_key": cache_key,
+                    "obd_code": obd_code,
+                    "vehicle_info": vehicle_info,
+                    "diagnosis": diagnosis,
+                    "created_at": datetime.utcnow().isoformat()
+                })
+            except Exception as e:
+                logger.error(f"AI diagnosis failed: {str(e)}")
+                diagnosis = {
+                    "summary": "AI диагностика недоступна",
+                    "description": f"Код ошибки: {obd_code}",
+                    "possible_causes": ["AI сервис временно недоступен"],
+                    "recommended_actions": ["Обратитесь к специалисту для диагностики"],
+                    "severity": "unknown"
+                }
         
         # Сохраняем диагностику в бортжурнал
         log_entry = LogEntry(
