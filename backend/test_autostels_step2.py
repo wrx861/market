@@ -2,13 +2,14 @@
 import requests
 import base64
 import xml.etree.ElementTree as ET
+import sys
 
 login_b64 = base64.b64encode(b'car.workshop72@mail.ru').decode()
 password_b64 = base64.b64encode(b'Qq23321q').decode()
 
-print("="*70)
-print("TEST: Autostels Step2 with different formats")
-print("="*70)
+print("="*70, flush=True)
+print("TEST: Autostels Step2 with different formats", flush=True)
+print("="*70, flush=True)
 
 # Test without ResultFilter, without PeriodMin/PeriodMax
 xml2_v1 = f'''<root>
