@@ -51,49 +51,38 @@ def is_exact_match(search_article: str, result_article: str) -> bool:
 def filter_relevant_results(parts: list, search_article: str) -> list:
     """
     Фильтрует результаты, оставляя только релевантные:
-    - Точное совпадение артикула (с учетом префиксов ST-, EX- и т.д.)
-    - Аналоги с тем же нормализованным артикулом
+    - ВСЕ аналоги которые вернули API поставщиков
     - НЕ показывает комплектующие (сальники, кольца и т.д.)
     - Убирает позиции с нулевой ценой или количеством
+    
+    Примечание: API поставщиков сами возвращают релевантные аналоги для запрошенного артикула,
+    поэтому мы не фильтруем по точному совпадению номера - показываем все что вернули API.
     """
     if not parts:
         return []
     
     filtered = []
-    search_normalized = normalize_article(search_article)
-    
-    # Убираем префиксы из поискового запроса для поиска оригинала
-    search_without_prefix = search_normalized
-    for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'R', 'SR', 'PSG', 'AGS', 'SL', 'HY', 'HNQ']:
-        if search_normalized.startswith(prefix) and len(search_normalized) > len(prefix):
-            search_without_prefix = search_normalized[len(prefix):]
-            break
     
     for part in parts:
-        part_article = part.get('article', '')
-        part_normalized = normalize_article(part_article)
         part_name = part.get('name', '').lower()
         
         # Пропускаем позиции с нулевой ценой или количеством (обычно Berg "Нет в наличии")
-        if part.get('price', 0) == 0 or part.get('quantity', 0) == 0:
+        if part.get('price', 0) <= 0 or part.get('quantity', 0) <= 0:
             continue
         
-        # Фильтруем комплектующие по названию (сальники, кольца, резиновые, хомуты и т.д.)
-        if any(keyword in part_name for keyword in ['сальник', 'кольцо', 'резинов', 'хомут', 'тефлон', 'ремкомплект', 'заглушка']):
+        # Фильтруем только комплектующие по ключевым словам в названии
+        # Комплектующие: сальники, кольца, резиновые уплотнители, хомуты, тефлоновые кольца, ремкомплекты
+        is_component = any(keyword in part_name for keyword in [
+            'сальник', 'кольцо', 'резинов', 'хомут', 'тефлон', 
+            'ремкомплект', 'ремонтный комплект', 'заглушка', 'втулк',
+            'пыльник', 'чехол', 'манжет', 'уплотнител'
+        ])
+        
+        if is_component:
             continue
         
-        # Проверяем точное совпадение (с учетом префиксов)
-        if search_normalized == part_normalized:
-            filtered.append(part)
-        # Проверяем совпадение без префикса (чтобы найти оригинал)
-        elif search_without_prefix == part_normalized:
-            filtered.append(part)
-        # Проверяем обратное - базовый номер в запросе с префиксом
-        elif search_without_prefix and search_without_prefix in part_normalized:
-            filtered.append(part)
-        # Проверяем если в запросе префикс, а деталь без префикса
-        elif part_normalized and part_normalized in search_normalized:
-            filtered.append(part)
+        # Все остальное - показываем (API сами вернули релевантные аналоги)
+        filtered.append(part)
     
     return filtered
 
