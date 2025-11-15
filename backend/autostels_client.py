@@ -138,9 +138,10 @@ class AutostelsClient:
         """
         try:
             # Формируем XML параметры для CDATA (согласно документации v3.6)
+            # Для Step2 используем SessionGUID (получен из Step1)
             # ResultFilter: 0 - старый формат, 2 - новый формат (используем 2)
             search_params = f"""<root>
-   {self._create_session_info()}
+   {self._create_session_info(use_session_guid=True)}
    <Search ResultFilter="2">
       <ProductID>{product_id}</ProductID>
       <StocksOnly>0</StocksOnly>
