@@ -49,7 +49,7 @@ class AutostelsClient:
             
             headers = {
                 'Content-Type': 'text/xml; charset=utf-8',
-                'SOAPAction': 'http://tempuri.org/ISearchService/SearchOfferStep1'
+                'SOAPAction': 'http://tempuri.org/IAS2CSearch/SearchOfferStep1'
             }
             
             response = requests.post(
