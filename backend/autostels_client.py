@@ -76,19 +76,33 @@ class AutostelsClient:
         try:
             root = ET.fromstring(xml_text)
             
-            # Находим все Brand элементы
+            # Извлекаем результат из SOAP envelope
             ns = {'s': 'http://schemas.xmlsoap.org/soap/envelope/',
                   't': 'http://tempuri.org/'}
             
+            # Находим SearchOfferStep1Result
+            result_elem = root.find('.//t:SearchOfferStep1Result', ns)
+            
+            if result_elem is None or not result_elem.text:
+                logger.warning("No SearchOfferStep1Result found in response")
+                return []
+            
+            # Парсим внутренний XML из результата
+            result_xml = result_elem.text
+            result_root = ET.fromstring(result_xml)
+            
             brands = []
-            for brand_elem in root.findall('.//t:Brand', ns):
-                product_id = brand_elem.findtext('t:ProductID', '', ns)
-                producer_name = brand_elem.findtext('t:ProducerName', '', ns)
+            # Ищем все элементы row внутри rows
+            for row in result_root.findall('.//row'):
+                product_id = row.findtext('ProductID', '')
+                producer_name = row.findtext('ProducerName', '')
                 
                 if product_id and producer_name:
                     brands.append({
                         'product_id': product_id,
-                        'producer_name': producer_name
+                        'producer_name': producer_name,
+                        'article': row.findtext('CodeAsIs', ''),
+                        'name': row.findtext('ProductName', '')
                     })
             
             logger.info(f"Found {len(brands)} brands for article")
@@ -96,6 +110,8 @@ class AutostelsClient:
             
         except Exception as e:
             logger.error(f"Error parsing step1 response: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return []
     
     def search_step2(self, product_id: str, in_stock: int = 1, show_cross: int = 2) -> List[Dict]:
