@@ -42,10 +42,13 @@ try:
         timeout=10
     )
     
-    print(f"\n✅ HTTP Status: {r2.status_code}\n")
+    print(f"\n✅ HTTP Status: {r2.status_code}\n", flush=True)
+    print(f"Response text length: {len(r2.text)}", flush=True)
     
     root2 = ET.fromstring(r2.text)
     res2 = root2.find('.//{http://tempuri.org/}SearchOfferStep2Result')
+    
+    print(f"Result element found: {res2 is not None}", flush=True)
     
     if res2 and res2.text:
         result_xml = res2.text
