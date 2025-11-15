@@ -188,11 +188,23 @@ class AutostelsClient:
             
             # Парсим внутренний XML из результата
             result_xml = result_elem.text
+            logger.debug(f"Step2 result XML: {result_xml[:500]}")
             result_root = ET.fromstring(result_xml)
+            
+            # Проверяем на ошибки в результате
+            error_elem = result_root.find('.//error')
+            if error_elem is not None:
+                error_state = error_elem.get('state', 'unknown')
+                error_msg = error_elem.findtext('message', 'Unknown error')
+                logger.warning(f"Step2 returned error: state={error_state}, message={error_msg}")
+                return []
             
             offers = []
             # Ищем все элементы row внутри rows
-            for row in result_root.findall('.//row'):
+            rows = result_root.findall('.//row')
+            logger.debug(f"Found {len(rows)} rows in Step2 response")
+            
+            for row in rows:
                 try:
                     # Извлекаем данные из row
                     price = row.findtext('Price', '0')
