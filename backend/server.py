@@ -80,15 +80,19 @@ def filter_relevant_results(parts: list, search_article: str) -> list:
         if not part_name or len(part_name) < 3:
             continue
         
-        # Фильтруем только комплектующие по ключевым словам в названии
+        # Фильтруем комплектующие, инструменты и наборы по ключевым словам в названии
         part_name_lower = part_name.lower()
-        is_component = any(keyword in part_name_lower for keyword in [
+        is_unwanted = any(keyword in part_name_lower for keyword in [
+            # Комплектующие
             'сальник', 'кольцо', 'резинов', 'хомут', 'тефлон', 
             'ремкомплект', 'ремонтный комплект', 'заглушка', 'втулк',
-            'пыльник', 'чехол', 'манжет', 'уплотнител'
+            'пыльник', 'чехол', 'манжет', 'уплотнител',
+            # Инструменты и наборы
+            'инструмент', 'ключ', 'ключей', 'набор', 'комплект ключей',
+            'bausatz', 'tool', 'wrench', 'монтаж', 'демонтаж'
         ])
         
-        if is_component:
+        if is_unwanted:
             continue
         
         # Все остальное - показываем (API сами вернули релевантные аналоги)
