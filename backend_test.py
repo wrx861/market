@@ -799,7 +799,7 @@ def test_berg_api_integration():
     print("ВАЖНО:")
     print("- BERG_API_KEY теперь добавлен в .env: 0fdaa3d7d2e65cc60f684ea6edb9f8e2a1e37ce5c7059067408a17bdb8d65e44")
     print("- Backend перезапущен")
-    print("- Backend URL: https://partfinder-app-1.preview.emergentagent.com/api")
+    print("- Backend URL: https://code-archive-11.preview.emergentagent.com/api")
     print("- Telegram Bot ПРОПУСТИТЬ - токен используется на хостинге пользователя (это нормально)")
     print("ЗАДАЧА:")
     print("Подтвердить что Berg API теперь работает и возвращает результаты вместе с Rossko и Autotrade.")

@@ -59,7 +59,7 @@ sudo supervisorctl restart backend
 ### Создайте тестовый заказ:
 
 ```bash
-curl -X POST https://partfinder-app-1.preview.emergentagent.com/api/orders \
+curl -X POST https://code-archive-11.preview.emergentagent.com/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "telegram_id": 123456789,
