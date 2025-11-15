@@ -11,18 +11,13 @@ print("="*70, flush=True)
 print("TEST: Autostels Step2 with different formats", flush=True)
 print("="*70, flush=True)
 
-# Test with MINIMAL fields - try with integer ProductID (remove leading zeros)
+# Test with different formats
 product_id = "25083996"
-product_id_int = str(int(product_id))  # Убираем ведущие нули если есть
 
-xml2_v1 = f'''<root>
-   <SessionInfo ParentID="39151" UserLogin="{login_b64}" UserPass="{password_b64}" />
-   <Search>
-      <ProductID>{product_id_int}</ProductID>
-   </Search>
-</root>'''
+# Format 1: Try with compact XML (no extra spaces/newlines)
+xml2_v1 = f'''<root><SessionInfo ParentID="39151" UserLogin="{login_b64}" UserPass="{password_b64}"/><Search><ProductID>{product_id}</ProductID></Search></root>'''
 
-print(f"\nUsing ProductID: {product_id_int}\n", flush=True)
+print(f"\nUsing compact XML format\n", flush=True)
 
 soap2 = f'''<?xml version="1.0" encoding="utf-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:tem="http://tempuri.org/">
