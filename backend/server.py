@@ -326,12 +326,12 @@ async def search_by_article(request: SearchArticleRequest):
                 variants = generate_article_variants(article)
                 oem_numbers.update(variants)
             
-            logger.info(f"Found {len(oem_numbers)} OEM numbers to search in Autotrade")
+            logger.info(f"Found {len(oem_numbers)} OEM variants to search in Autotrade")
             
-            # Ищем в Autotrade по каждому OEM номеру (максимум 5 чтобы не перегружать)
+            # Ищем в Autotrade по каждому OEM номеру (максимум 3 чтобы не перегружать API)
             if oem_numbers:
                 oem_search_tasks = []
-                for oem in list(oem_numbers)[:5]:  # Берем первые 5 OEM
+                for oem in list(oem_numbers)[:3]:  # Берем первые 3 OEM
                     async def search_by_oem(oem_number):
                         try:
                             loop = asyncio.get_event_loop()
