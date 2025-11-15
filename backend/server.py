@@ -428,6 +428,10 @@ async def search_by_vin(request: SearchVINRequest):
     try:
         logger.info(f"Searching VIN via PartsAPI: {request.vin}")
         
+        # Проверяем доступен ли PartsAPI клиент
+        if not partsapi_client:
+            raise HTTPException(status_code=503, detail="PartsAPI service not available - API key not configured")
+        
         # Получаем информацию об автомобиле через PartsAPI
         car_info = partsapi_client.get_car_info_by_vin(request.vin)
         
