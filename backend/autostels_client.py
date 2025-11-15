@@ -18,6 +18,9 @@ class AutostelsClient:
         password = "Qq23321q"
         self.login_b64 = base64.b64encode(login.encode('utf-8')).decode('utf-8')
         self.password_b64 = base64.b64encode(password.encode('utf-8')).decode('utf-8')
+        
+        # SessionGUID получается из Step1 и используется в Step2
+        self.session_guid = None
     
     def _create_session_info(self) -> str:
         """Создает XML для SessionInfo (используем атрибуты как в документации)"""
