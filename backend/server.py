@@ -184,6 +184,43 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
         # Для Autotrade: только Екатеринбург и Тюмень
         # Для остальных: delivery ≤ 1 день
         result = [p for p in result if p.get('in_stock', False)]
+        
+        # ВАЖНО: После фильтрации применяем дедупликацию заново
+        # Потому что Autostels может вернуть много складов для одного артикула
+        # Оставляем максимум 2 позиции: дешевая + быстрая
+        grouped_after_filter = {}
+        for part in result:
+            article_normalized = normalize_article(part['article'])
+            brand = part.get('brand', 'UNKNOWN').upper()
+            key = f"{article_normalized}_{brand}"
+            
+            if key not in grouped_after_filter:
+                grouped_after_filter[key] = {
+                    'cheapest': part,
+                    'fastest': part
+                }
+            else:
+                # Обновляем самую дешевую
+                if part['price'] < grouped_after_filter[key]['cheapest']['price']:
+                    grouped_after_filter[key]['cheapest'] = part
+                
+                # Обновляем самую быструю
+                if part['delivery_days'] < grouped_after_filter[key]['fastest']['delivery_days']:
+                    grouped_after_filter[key]['fastest'] = part
+        
+        # Собираем результат
+        result = []
+        for data in grouped_after_filter.values():
+            result.append(data['cheapest'])
+            # Добавляем fastest только если это другая позиция
+            if data['cheapest'] != data['fastest']:
+                cheapest = data['cheapest']
+                fastest = data['fastest']
+                if (cheapest.get('provider') != fastest.get('provider') or
+                    cheapest.get('warehouse') != fastest.get('warehouse') or
+                    cheapest.get('price') != fastest.get('price')):
+                    result.append(fastest)
+    
     elif availability_filter == 'on_order':
         # "Под заказ" = не в наличии или доставка > 1 дня
         result = [p for p in result if not p.get('in_stock', False) or p.get('delivery_days', 999) > 1]
