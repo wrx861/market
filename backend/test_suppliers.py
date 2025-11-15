@@ -83,7 +83,7 @@ async def test_all_suppliers():
     # Berg
     print("📦 BERG:")
     try:
-        berg = BergClient(os.environ['BERG_API_KEY'])
+        berg = BergClient()
         berg_results = berg.search_by_article(article, analogs=True)
         
         in_stock = [r for r in berg_results if r.get('in_stock', False)]
