@@ -213,11 +213,24 @@ async def search_by_article(request: SearchArticleRequest):
                 logger.error(f"Berg search error: {str(e)}")
                 return []
         
-        # Запускаем все три поиска параллельно
-        rossko_parts, autotrade_parts, berg_parts = await asyncio.gather(
+        async def search_autostels():
+            try:
+                # Для Autostels используем синхронный метод в executor
+                loop = asyncio.get_event_loop()
+                return await loop.run_in_executor(
+                    None,
+                    lambda: autostels_client.search_by_article(request.article)
+                )
+            except Exception as e:
+                logger.error(f"Autostels search error: {str(e)}")
+                return []
+        
+        # Запускаем все ЧЕТЫРЕ поиска параллельно
+        rossko_parts, autotrade_parts, berg_parts, autostels_parts = await asyncio.gather(
             search_rossko(),
             search_autotrade(),
             search_berg(),
+            search_autostels(),
             return_exceptions=True
         )
         
