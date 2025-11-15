@@ -4798,7 +4798,7 @@ if __name__ == "__main__":
         print(f"⚠️  Система устойчива - другие поставщики работают")
         print(f"❌ Требуется дополнительная диагностика")
     
-    if autotrade_success:
+    if autostels_success:
         print(f"\n✅ AUTOTRADE API PARSING WORKING:")
         print(f"   ✅ Артикул ST-dtw1-395-0 возвращает корректные данные")
         print(f"   ✅ Цены больше не равны 0 руб")
