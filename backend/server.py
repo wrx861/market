@@ -167,15 +167,25 @@ def deduplicate_and_prioritize(parts: list, search_article: str = "", availabili
     search_normalized = normalize_article(search_article) if search_article else ""
     search_original = search_article.upper().replace('-', '').replace(' ', '') if search_article else ""
     
+    # Убираем префиксы из поискового запроса
+    search_without_prefix = search_normalized
+    for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'PSG', 'AGS', 'SL', 'R', 'SR']:
+        if search_normalized.startswith(prefix):
+            search_without_prefix = search_normalized[len(prefix):]
+            break
+    
     for part in result:
         part_article = part.get('article', '')
         part_normalized = normalize_article(part_article)
         part_clean = part_article.upper().replace('-', '').replace(' ', '')
         
-        # Помечаем оригинальный артикул (не аналог)
-        part['is_original'] = not part.get('is_cross', False)
+        # Проверяем наличие префикса у детали
+        part_has_prefix = any(part_normalized.startswith(prefix) for prefix in ['ST', 'EX', 'HAZ', 'HNQ', 'PSG', 'AGS', 'SL'])
         
-        # Помечаем запрошенный артикул (точное совпадение с учетом префиксов ST-, EX- и т.д.)
+        # Помечаем оригинальный артикул - БЕЗ префикса или API сказал что не аналог
+        part['is_original'] = (not part_has_prefix) or (not part.get('is_cross', False))
+        
+        # Помечаем запрошенный артикул (точное совпадение)
         part['is_requested'] = (part_normalized == search_normalized) or (part_clean == search_original)
     
     # Приоритизация результатов
