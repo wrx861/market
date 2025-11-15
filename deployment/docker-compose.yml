@@ -16,12 +16,12 @@ services:
 
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: ../backend
+      dockerfile: ../deployment/backend.Dockerfile
     container_name: market-backend
     restart: unless-stopped
     env_file:
-      - ./backend/.env
+      - ../backend/.env
     depends_on:
       - mongodb
     networks:
@@ -31,12 +31,12 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: ../frontend
+      dockerfile: ../deployment/frontend.Dockerfile
     container_name: market-frontend
     restart: unless-stopped
     env_file:
-      - ./frontend/.env
+      - ../frontend/.env
     depends_on:
       - backend
     networks:
